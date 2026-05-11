@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="120" fill="#1a1a1a" />
+
+  <g stroke-width="32" stroke-linecap="round" fill="none">
+    <path d="M 128 128 Q 256 128 256 256" stroke="#38bdf8" />
+    <path d="M 128 384 Q 128 256 256 256" stroke="#a855f7" />
+    <path d="M 384 384 Q 256 384 256 256" stroke="#10b981" />
+    <path d="M 384 128 Q 384 256 256 256" stroke="#facc15" />
+  </g>
+
+  <g>
+    <circle cx="128" cy="128" r="32" fill="#38bdf8" />
+    <circle cx="128" cy="384" r="32" fill="#a855f7" />
+    <circle cx="384" cy="384" r="32" fill="#10b981" />
+    <circle cx="384" cy="128" r="32" fill="#facc15" />
+  </g>
+
+  <polygon points="256,150 348,203 348,309 256,362 164,309 164,203" fill="#ea580c"/>
+  <circle cx="256" cy="256" r="36" fill="#ffffff" />
+</svg>

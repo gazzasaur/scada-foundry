@@ -1,683 +1,179 @@
 <script lang="ts">
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import {
+		Navbar,
+		NavBrand,
+		NavHamburger,
+		NavLi,
+		NavUl,
+		Sidebar,
+		SidebarDropdownWrapper,
+		SidebarGroup,
+		SidebarItem
+	} from 'flowbite-svelte';
+	import { page } from '$app/state';
 
 	let { children } = $props();
+
+	import {
+		ChartOutline,
+		GridSolid,
+		MailBoxSolid,
+		UserSolid,
+		ArrowRightToBracketOutline,
+		EditSolid,
+		ShoppingBagSolid,
+		CodeMergeOutline,
+		ToggleHeaderCellOutline,
+		ShareNodesOutline
+	} from 'flowbite-svelte-icons';
+	let activeUrl = $state(page.url.pathname);
+	const spanClass = 'flex-1 ms-3 whitespace-nowrap';
+
+	const sidebarMatch: string | string[] = 'docs/components/sidebar';
+	const matchesRoute = $derived.by(() => {
+		const list = Array.isArray(sidebarMatch) ? sidebarMatch : [sidebarMatch];
+		return list.some((p) => activeUrl.startsWith(`/${p}`));
+	});
+
+	$effect(() => {
+		activeUrl = page.url.pathname;
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-{@render children()}
 
-<div class="bg-gray-50 antialiased dark:bg-gray-900">
-	<nav
-		class="fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800"
+<header>
+	<Navbar
+		fluid={true}
+		class="z-20 h-17 border-b border-gray-200 bg-white dark:border-gray-600 dark:bg-gray-800"
 	>
-		<div class="flex flex-wrap items-center justify-between">
-			<div class="flex items-center justify-start">
-				<a href="." class="mr-4 flex items-center justify-between">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="48" height="48">
-						<defs>
-							<!-- Background Gradient (Charcoal) -->
-							<linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-								<stop offset="0%" stop-color="#121212" />
-								<stop offset="100%" stop-color="#2a2a2a" />
-							</linearGradient>
+		<NavBrand href="/">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="48" height="48">
+				<defs>
+					<!-- Background Gradient (Charcoal) -->
+					<linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stop-color="#121212" />
+						<stop offset="100%" stop-color="#2a2a2a" />
+					</linearGradient>
 
-							<!-- Foundry Core Gradient (Hot Forge / Fire) -->
-							<linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-								<stop offset="0%" stop-color="#f97316" />
-								<stop offset="100%" stop-color="#b91c1c" />
-							</linearGradient>
+					<!-- Foundry Core Gradient (Hot Forge / Fire) -->
+					<linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stop-color="#f97316" />
+						<stop offset="100%" stop-color="#b91c1c" />
+					</linearGradient>
 
-							<!-- Signal Gradients for Data Flowing In -->
-							<linearGradient id="line1" x1="0%" y1="0%" x2="100%" y2="100%">
-								<stop offset="0%" stop-color="#38bdf8" />
-								<stop offset="100%" stop-color="#f97316" />
-							</linearGradient>
-							<linearGradient id="line2" x1="0%" y1="100%" x2="100%" y2="0%">
-								<stop offset="0%" stop-color="#a855f7" />
-								<stop offset="100%" stop-color="#f97316" />
-							</linearGradient>
-							<linearGradient id="line3" x1="100%" y1="100%" x2="0%" y2="0%">
-								<stop offset="0%" stop-color="#10b981" />
-								<stop offset="100%" stop-color="#f97316" />
-							</linearGradient>
-							<linearGradient id="line4" x1="100%" y1="0%" x2="0%" y2="100%">
-								<stop offset="0%" stop-color="#facc15" />
-								<stop offset="100%" stop-color="#f97316" />
-							</linearGradient>
+					<!-- Signal Gradients for Data Flowing In -->
+					<linearGradient id="line1" x1="0%" y1="0%" x2="100%" y2="100%">
+						<stop offset="0%" stop-color="#38bdf8" />
+						<stop offset="100%" stop-color="#f97316" />
+					</linearGradient>
+					<linearGradient id="line2" x1="0%" y1="100%" x2="100%" y2="0%">
+						<stop offset="0%" stop-color="#a855f7" />
+						<stop offset="100%" stop-color="#f97316" />
+					</linearGradient>
+					<linearGradient id="line3" x1="100%" y1="100%" x2="0%" y2="0%">
+						<stop offset="0%" stop-color="#10b981" />
+						<stop offset="100%" stop-color="#f97316" />
+					</linearGradient>
+					<linearGradient id="line4" x1="100%" y1="0%" x2="0%" y2="100%">
+						<stop offset="0%" stop-color="#facc15" />
+						<stop offset="100%" stop-color="#f97316" />
+					</linearGradient>
 
-							<!-- Glowing Effect for the Foundry Core -->
-							<!-- Increased bounds from -20% to -100% to prevent hard squared-off edges on smaller shapes like circles -->
-							<filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
-								<feGaussianBlur stdDeviation="12" result="blur" />
-								<feMerge>
-									<feMergeNode in="blur" />
-									<feMergeNode in="SourceGraphic" />
-								</feMerge>
-							</filter>
-						</defs>
+					<!-- Glowing Effect for the Foundry Core -->
+					<!-- Increased bounds from -20% to -100% to prevent hard squared-off edges on smaller shapes like circles -->
+					<filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+						<feGaussianBlur stdDeviation="12" result="blur" />
+						<feMerge>
+							<feMergeNode in="blur" />
+							<feMergeNode in="SourceGraphic" />
+						</feMerge>
+					</filter>
+				</defs>
 
-						<!-- Background Canvas -->
-						<rect width="512" height="512" rx="96" fill="url(#bg)" />
+				<!-- Background Canvas -->
+				<rect width="512" height="512" rx="96" fill="url(#bg)" />
 
-						<!-- Flowing Data Lines from Points to the Core Hub -->
-						<g stroke-width="14" stroke-linecap="round" fill="none">
-							<!-- Top Left -->
-							<path d="M 128 128 Q 256 128 256 256" stroke="url(#line1)" />
-							<!-- Bottom Left -->
-							<path d="M 128 384 Q 128 256 256 256" stroke="url(#line2)" />
-							<!-- Bottom Right -->
-							<path d="M 384 384 Q 256 384 256 256" stroke="url(#line3)" />
-							<!-- Top Right -->
-							<path d="M 384 128 Q 384 256 256 256" stroke="url(#line4)" />
-						</g>
+				<!-- Flowing Data Lines from Points to the Core Hub -->
+				<g stroke-width="14" stroke-linecap="round" fill="none">
+					<!-- Top Left -->
+					<path d="M 128 128 Q 256 128 256 256" stroke="url(#line1)" />
+					<!-- Bottom Left -->
+					<path d="M 128 384 Q 128 256 256 256" stroke="url(#line2)" />
+					<!-- Bottom Right -->
+					<path d="M 384 384 Q 256 384 256 256" stroke="url(#line3)" />
+					<!-- Top Right -->
+					<path d="M 384 128 Q 384 256 256 256" stroke="url(#line4)" />
+				</g>
 
-						<!-- Outer Protocol Nodes (Connecting Points) -->
-						<g>
-							<circle cx="128" cy="128" r="24" fill="#38bdf8" />
-							<circle cx="128" cy="128" r="10" fill="#121212" />
+				<!-- Outer Protocol Nodes (Connecting Points) -->
+				<g>
+					<circle cx="128" cy="128" r="24" fill="#38bdf8" />
+					<circle cx="128" cy="128" r="10" fill="#121212" />
 
-							<circle cx="128" cy="384" r="24" fill="#a855f7" />
-							<circle cx="128" cy="384" r="10" fill="#121212" />
+					<circle cx="128" cy="384" r="24" fill="#a855f7" />
+					<circle cx="128" cy="384" r="10" fill="#121212" />
 
-							<circle cx="384" cy="384" r="24" fill="#10b981" />
-							<circle cx="384" cy="384" r="10" fill="#121212" />
+					<circle cx="384" cy="384" r="24" fill="#10b981" />
+					<circle cx="384" cy="384" r="10" fill="#121212" />
 
-							<circle cx="384" cy="128" r="24" fill="#facc15" />
-							<circle cx="384" cy="128" r="10" fill="#121212" />
-						</g>
+					<circle cx="384" cy="128" r="24" fill="#facc15" />
+					<circle cx="384" cy="128" r="10" fill="#121212" />
+				</g>
 
-						<!-- Multi-layered Foundry Core (Hexagon Forge + Data Point) -->
-						<g filter="url(#glow)">
-							<!-- Base Hexagon -->
-							<polygon
-								points="256,160 339,208 339,304 256,352 173,304 173,208"
-								fill="url(#coreGrad)"
+				<!-- Multi-layered Foundry Core (Hexagon Forge + Data Point) -->
+				<g filter="url(#glow)">
+					<!-- Base Hexagon -->
+					<polygon points="256,160 339,208 339,304 256,352 173,304 173,208" fill="url(#coreGrad)" />
+					<!-- Inner Dark Hexagon to create a ring effect -->
+					<polygon points="256,180 322,218 322,294 256,332 190,294 190,218" fill="#1a1a1a" />
+				</g>
+
+				<!-- Dead Center Data Node -->
+				<circle cx="256" cy="256" r="28" fill="#f97316" filter="url(#glow)" />
+				<circle cx="256" cy="256" r="14" fill="#fff" />
+			</svg>
+
+			<span class="ml-4 self-center text-xl font-semibold whitespace-nowrap dark:text-white"
+				>SCADA Foundry</span
+			>
+		</NavBrand>
+	</Navbar>
+</header>
+
+<div class="fixed h-dvh block z-10 -top-0 pt-17 w-full bg-white dark:bg-gray-800">
+	<div class="flex w-full h-full">
+		<div>
+			<Sidebar class="h-full relative block border-r border-gray-200 dark:border-gray-600" {activeUrl} isOpen={true} backdrop={false} isSingle={false}>
+				<SidebarGroup>
+					<SidebarItem label="Overview" href="/iccp/associations" />
+					<SidebarDropdownWrapper label="ICCP" classes={{ btn: 'p-2' }} isOpen={matchesRoute}>
+						{#snippet icon()}
+							<CodeMergeOutline
+								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
-							<!-- Inner Dark Hexagon to create a ring effect -->
-							<polygon points="256,180 322,218 322,294 256,332 190,294 190,218" fill="#1a1a1a" />
-						</g>
-
-						<!-- Dead Center Data Node -->
-						<circle cx="256" cy="256" r="28" fill="#f97316" filter="url(#glow)" />
-						<circle cx="256" cy="256" r="14" fill="#fff" />
-					</svg>
-					<span class="ml-4 self-center text-2xl font-semibold whitespace-nowrap dark:text-white"
-						>SCADA Foundry</span
-					>
-				</a>
-			</div>
+						{/snippet}
+						<SidebarItem label="Associations" href="/iccp/associations" />
+						<SidebarItem label="Scan" href="/docs/components/sidebar" />
+					</SidebarDropdownWrapper>
+					<SidebarDropdownWrapper label="DNP3" classes={{ btn: 'p-2' }} isOpen={matchesRoute}>
+						{#snippet icon()}
+							<ShareNodesOutline
+								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
+							/>
+						{/snippet}
+						<SidebarItem label="Comping Soon" href="/" />
+					</SidebarDropdownWrapper>
+				</SidebarGroup>
+			</Sidebar>
 		</div>
-	</nav>
-
-	<!-- Sidebar -->
-
-	<aside
-		class="fixed top-0 left-0 z-40 h-screen w-64 -translate-x-full border-r border-gray-200 bg-white pt-14 transition-transform md:translate-x-0 dark:border-gray-700 dark:bg-gray-800"
-		aria-label="Sidenav"
-		id="drawer-navigation"
-	>
-		<div class="h-full overflow-y-auto bg-white px-3 py-5 dark:bg-gray-800">
-			<ul class="space-y-2">
-				<li>
-					<button
-						type="button"
-						class="group flex w-full items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-						aria-controls="dropdown-pages"
-						data-collapse-toggle="dropdown-pages"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-						<span class="ml-3 flex-1 text-left whitespace-nowrap">Pages</span>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-					</button>
-					<ul id="dropdown-pages" class="hidden space-y-2 py-2">
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Settings</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Kanban</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Calendar</a
-							>
-						</li>
-					</ul>
-				</li>
-				<li>
-					<button
-						type="button"
-						class="group flex w-full items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-						aria-controls="dropdown-sales"
-						data-collapse-toggle="dropdown-sales"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-						<span class="ml-3 flex-1 text-left whitespace-nowrap">Sales</span>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-					</button>
-					<ul id="dropdown-sales" class="hidden space-y-2 py-2">
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Products</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Billing</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Invoice</a
-							>
-						</li>
-					</ul>
-				</li>
-				<li>
-					<a
-						href="#"
-						class="group flex items-center rounded-lg p-2 text-base font-medium text-gray-900 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M8.707 7.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414L11 7.586V3a1 1 0 10-2 0v4.586l-.293-.293z"
-							></path>
-							<path
-								d="M3 5a2 2 0 012-2h1a1 1 0 010 2H5v7h2l1 2h4l1-2h2V5h-1a1 1 0 110-2h1a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"
-							></path>
-						</svg>
-						<span class="ml-3 flex-1 whitespace-nowrap">Messages</span>
-						<span
-							class="text-primary-800 bg-primary-100 dark:bg-primary-200 dark:text-primary-800 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold"
-						>
-							4
-						</span>
-					</a>
-				</li>
-				<li>
-					<button
-						type="button"
-						class="group flex w-full items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-						aria-controls="dropdown-authentication"
-						data-collapse-toggle="dropdown-authentication"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-						<span class="ml-3 flex-1 text-left whitespace-nowrap">Authentication</span>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-					</button>
-					<ul id="dropdown-authentication" class="hidden space-y-2 py-2">
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Sign In</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Sign Up</a
-							>
-						</li>
-						<li>
-							<a
-								href="#"
-								class="group flex w-full items-center rounded-lg p-2 pl-11 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-								>Forgot Password</a
-							>
-						</li>
-					</ul>
-				</li>
-			</ul>
-			<ul class="mt-5 space-y-2 border-t border-gray-200 pt-5 dark:border-gray-700">
-				<li>
-					<a
-						href="#"
-						class="group flex items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-							<path
-								fill-rule="evenodd"
-								d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-						<span class="ml-3">Docs</span>
-					</a>
-				</li>
-				<li>
-					<a
-						href="#"
-						class="group flex items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"
-							></path>
-						</svg>
-						<span class="ml-3">Components</span>
-					</a>
-				</li>
-				<li>
-					<a
-						href="#"
-						class="group flex items-center rounded-lg p-2 text-base font-medium text-gray-900 transition duration-75 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700"
-					>
-						<svg
-							aria-hidden="true"
-							class="h-6 w-6 flex-shrink-0 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0c0 .993-.241 1.929-.668 2.754l-1.524-1.525a3.997 3.997 0 00.078-2.183l1.562-1.562C15.802 8.249 16 9.1 16 10zm-5.165 3.913l1.58 1.58A5.98 5.98 0 0110 16a5.976 5.976 0 01-2.516-.552l1.562-1.562a4.006 4.006 0 001.789.027zm-4.677-2.796a4.002 4.002 0 01-.041-2.08l-.08.08-1.53-1.533A5.98 5.98 0 004 10c0 .954.223 1.856.619 2.657l1.54-1.54zm1.088-6.45A5.974 5.974 0 0110 4c.954 0 1.856.223 2.657.619l-1.54 1.54a4.002 4.002 0 00-2.346.033L7.246 4.668zM12 10a2 2 0 11-4 0 2 2 0 014 0z"
-								clip-rule="evenodd"
-							></path>
-						</svg>
-						<span class="ml-3">Help</span>
-					</a>
-				</li>
-			</ul>
+		<div class="overflow-auto flex-1 z-100">
+			<p>
+				aaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbcccccccccccddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeefffffffffffffffffff
+			</p>
+			{@render children()}
 		</div>
-		<div
-			class="absolute bottom-0 left-0 z-20 hidden w-full justify-center space-x-4 bg-white p-4 lg:flex dark:bg-gray-800"
-		>
-			<a
-				href="#"
-				class="inline-flex cursor-pointer justify-center rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-white"
-			>
-				<svg
-					aria-hidden="true"
-					class="h-6 w-6"
-					fill="currentColor"
-					viewBox="0 0 20 20"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"
-					></path>
-				</svg>
-			</a>
-			<a
-				href="#"
-				data-tooltip-target="tooltip-settings"
-				class="inline-flex cursor-pointer justify-center rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-white"
-			>
-				<svg
-					aria-hidden="true"
-					class="h-6 w-6"
-					fill="currentColor"
-					viewBox="0 0 20 20"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-						clip-rule="evenodd"
-					></path>
-				</svg>
-			</a>
-			<div
-				id="tooltip-settings"
-				role="tooltip"
-				class="tooltip invisible absolute z-10 inline-block rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-sm transition-opacity duration-300"
-			>
-				Settings page
-				<div class="tooltip-arrow" data-popper-arrow></div>
-			</div>
-			<button
-				type="button"
-				data-dropdown-toggle="language-dropdown"
-				class="inline-flex cursor-pointer justify-center rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-white"
-			>
-				<svg
-					aria-hidden="true"
-					class="mt-0.5 h-5 w-5 rounded-full"
-					xmlns="http://www.w3.org/2000/svg"
-					xmlns:xlink="http://www.w3.org/1999/xlink"
-					viewBox="0 0 3900 3900"
-				>
-					<path fill="#b22234" d="M0 0h7410v3900H0z" />
-					<path
-						d="M0 450h7410m0 600H0m0 600h7410m0 600H0m0 600h7410m0 600H0"
-						stroke="#fff"
-						stroke-width="300"
-					/>
-					<path fill="#3c3b6e" d="M0 0h2964v2100H0z" />
-					<g fill="#fff">
-						<g id="d">
-							<g id="c">
-								<g id="e">
-									<g id="b">
-										<path
-											id="a"
-											d="M247 90l70.534 217.082-184.66-134.164h228.253L176.466 307.082z"
-										/>
-										<use xlink:href="#a" y="420" />
-										<use xlink:href="#a" y="840" />
-										<use xlink:href="#a" y="1260" />
-									</g>
-									<use xlink:href="#a" y="1680" />
-								</g>
-								<use xlink:href="#b" x="247" y="210" />
-							</g>
-							<use xlink:href="#c" x="494" />
-						</g>
-						<use xlink:href="#d" x="988" />
-						<use xlink:href="#c" x="1976" />
-						<use xlink:href="#e" x="2470" />
-					</g>
-				</svg>
-			</button>
-			<!-- Dropdown -->
-			<div
-				class="z-50 my-4 hidden list-none divide-y divide-gray-100 rounded bg-white text-base shadow dark:bg-gray-700"
-				id="language-dropdown"
-			>
-				<ul class="py-1" role="none">
-					<li>
-						<a
-							href="#"
-							class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-							role="menuitem"
-						>
-							<div class="inline-flex items-center">
-								<svg
-									aria-hidden="true"
-									class="mr-2 h-3.5 w-3.5 rounded-full"
-									xmlns="http://www.w3.org/2000/svg"
-									id="flag-icon-css-us"
-									viewBox="0 0 512 512"
-								>
-									<g fill-rule="evenodd">
-										<g stroke-width="1pt">
-											<path
-												fill="#bd3d44"
-												d="M0 0h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0z"
-												transform="scale(3.9385)"
-											/>
-											<path
-												fill="#fff"
-												d="M0 10h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0zm0 20h247v10H0z"
-												transform="scale(3.9385)"
-											/>
-										</g>
-										<path fill="#192f5d" d="M0 0h98.8v70H0z" transform="scale(3.9385)" />
-										<path
-											fill="#fff"
-											d="M8.2 3l1 2.8H12L9.7 7.5l.9 2.7-2.4-1.7L6 10.2l.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8H45l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7L74 8.5l-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9L92 7.5l1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm-74.1 7l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7H65zm16.4 0l1 2.8H86l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm-74 7l.8 2.8h3l-2.4 1.7.9 2.7-2.4-1.7L6 24.2l.9-2.7-2.4-1.7h3zm16.4 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8H45l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9L92 21.5l1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm-74.1 7l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7H65zm16.4 0l1 2.8H86l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm-74 7l.8 2.8h3l-2.4 1.7.9 2.7-2.4-1.7L6 38.2l.9-2.7-2.4-1.7h3zm16.4 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8H45l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9L92 35.5l1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm-74.1 7l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7H65zm16.4 0l1 2.8H86l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm-74 7l.8 2.8h3l-2.4 1.7.9 2.7-2.4-1.7L6 52.2l.9-2.7-2.4-1.7h3zm16.4 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8H45l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9L92 49.5l1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm-74.1 7l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7H65zm16.4 0l1 2.8H86l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm-74 7l.8 2.8h3l-2.4 1.7.9 2.7-2.4-1.7L6 66.2l.9-2.7-2.4-1.7h3zm16.4 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8H45l-2.4 1.7 1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9zm16.4 0l1 2.8h2.8l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h3zm16.5 0l.9 2.8h2.9l-2.3 1.7.9 2.7-2.4-1.7-2.3 1.7.9-2.7-2.4-1.7h2.9zm16.5 0l.9 2.8h2.9L92 63.5l1 2.7-2.4-1.7-2.4 1.7 1-2.7-2.4-1.7h2.9z"
-											transform="scale(3.9385)"
-										/>
-									</g>
-								</svg>
-								English (US)
-							</div>
-						</a>
-					</li>
-					<li>
-						<a
-							href="#"
-							class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-							role="menuitem"
-						>
-							<div class="inline-flex items-center">
-								<svg
-									aria-hidden="true"
-									class="mr-2 h-3.5 w-3.5 rounded-full"
-									xmlns="http://www.w3.org/2000/svg"
-									id="flag-icon-css-de"
-									viewBox="0 0 512 512"
-								>
-									<path fill="#ffce00" d="M0 341.3h512V512H0z" />
-									<path d="M0 0h512v170.7H0z" />
-									<path fill="#d00" d="M0 170.7h512v170.6H0z" />
-								</svg>
-								Deutsch
-							</div>
-						</a>
-					</li>
-					<li>
-						<a
-							href="#"
-							class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-							role="menuitem"
-						>
-							<div class="inline-flex items-center">
-								<svg
-									aria-hidden="true"
-									class="mr-2 h-3.5 w-3.5 rounded-full"
-									xmlns="http://www.w3.org/2000/svg"
-									id="flag-icon-css-it"
-									viewBox="0 0 512 512"
-								>
-									<g fill-rule="evenodd" stroke-width="1pt">
-										<path fill="#fff" d="M0 0h512v512H0z" />
-										<path fill="#009246" d="M0 0h170.7v512H0z" />
-										<path fill="#ce2b37" d="M341.3 0H512v512H341.3z" />
-									</g>
-								</svg>
-								Italiano
-							</div>
-						</a>
-					</li>
-					<li>
-						<a
-							href="#"
-							class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-							role="menuitem"
-						>
-							<div class="inline-flex items-center">
-								<svg
-									aria-hidden="true"
-									class="mr-2 h-3.5 w-3.5 rounded-full"
-									xmlns="http://www.w3.org/2000/svg"
-									xmlns:xlink="http://www.w3.org/1999/xlink"
-									id="flag-icon-css-cn"
-									viewBox="0 0 512 512"
-								>
-									<defs>
-										<path id="a" fill="#ffde00" d="M1-.3L-.7.8 0-1 .6.8-1-.3z" />
-									</defs>
-									<path fill="#de2910" d="M0 0h512v512H0z" />
-									<use
-										width="30"
-										height="20"
-										transform="matrix(76.8 0 0 76.8 128 128)"
-										xlink:href="#a"
-									/>
-									<use
-										width="30"
-										height="20"
-										transform="rotate(-121 142.6 -47) scale(25.5827)"
-										xlink:href="#a"
-									/>
-									<use
-										width="30"
-										height="20"
-										transform="rotate(-98.1 198 -82) scale(25.6)"
-										xlink:href="#a"
-									/>
-									<use
-										width="30"
-										height="20"
-										transform="rotate(-74 272.4 -114) scale(25.6137)"
-										xlink:href="#a"
-									/>
-									<use
-										width="30"
-										height="20"
-										transform="matrix(16 -19.968 19.968 16 256 230.4)"
-										xlink:href="#a"
-									/>
-								</svg>
-								中文 (繁體)
-							</div>
-						</a>
-					</li>
-				</ul>
-			</div>
-		</div>
-	</aside>
-
-	<main class="h-auto p-4 pt-20 md:ml-64">
-		<div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<div
-				class="h-32 rounded-lg border-2 border-dashed border-gray-300 md:h-64 dark:border-gray-600"
-			></div>
-			<div
-				class="h-32 rounded-lg border-2 border-dashed border-gray-300 md:h-64 dark:border-gray-600"
-			></div>
-			<div
-				class="h-32 rounded-lg border-2 border-dashed border-gray-300 md:h-64 dark:border-gray-600"
-			></div>
-			<div
-				class="h-32 rounded-lg border-2 border-dashed border-gray-300 md:h-64 dark:border-gray-600"
-			></div>
-		</div>
-		<div
-			class="mb-4 h-96 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600"
-		></div>
-		<div class="mb-4 grid grid-cols-2 gap-4">
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-		</div>
-		<div
-			class="mb-4 h-96 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600"
-		></div>
-		<div class="grid grid-cols-2 gap-4">
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-			<div
-				class="h-48 rounded-lg border-2 border-dashed border-gray-300 md:h-72 dark:border-gray-600"
-			></div>
-		</div>
-	</main>
+	</div>
 </div>
