@@ -1,0 +1,19 @@
+[package]
+name = "scada-foundry-service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rusty-acse = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-copp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-cosp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-cotp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-iccp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-mms = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-mms-service = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-tpkt = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+
+axum = "0.8.9"
+tokio = { version = "1.52.3", features = ["full"] }
+tracing-subscriber = "0.3.23"
+serde = "1.0.228"

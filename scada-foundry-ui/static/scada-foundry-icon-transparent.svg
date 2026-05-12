@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Foundry Core Gradient (Hot Forge / Fire) -->
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    
+    <!-- Signal Gradients for Data Flowing In -->
+    <linearGradient id="line1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="line2" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="line3" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="line4" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+
+    <!-- Glowing Effect for the Foundry Core -->
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Mask to punch transparent holes where the dark background used to show through -->
+    <mask id="cutout">
+      <rect width="512" height="512" fill="white" />
+      <circle cx="128" cy="128" r="10" fill="black" />
+      <circle cx="128" cy="384" r="10" fill="black" />
+      <circle cx="384" cy="384" r="10" fill="black" />
+      <circle cx="384" cy="128" r="10" fill="black" />
+      <polygon points="256,180 322,218 322,294 256,332 190,294 190,218" fill="black" />
+    </mask>
+  </defs>
+
+  <!-- EVERYTHING overlapping the holes is wrapped in the mask so underlying lines get cut -->
+  <g mask="url(#cutout)">
+    <!-- Flowing Data Lines from Points to the Core Hub -->
+    <g stroke-width="14" stroke-linecap="round" fill="none">
+      <path d="M 128 128 Q 256 128 256 256" stroke="url(#line1)" />
+      <path d="M 128 384 Q 128 256 256 256" stroke="url(#line2)" />
+      <path d="M 384 384 Q 256 384 256 256" stroke="url(#line3)" />
+      <path d="M 384 128 Q 384 256 256 256" stroke="url(#line4)" />
+    </g>
+
+    <!-- Outer Nodes -->
+    <circle cx="128" cy="128" r="24" fill="#38bdf8" />
+    <circle cx="128" cy="384" r="24" fill="#a855f7" />
+    <circle cx="384" cy="384" r="24" fill="#10b981" />
+    <circle cx="384" cy="128" r="24" fill="#facc15" />
+    
+    <!-- Base Hexagon -->
+    <polygon points="256,160 339,208 339,304 256,352 173,304 173,208" fill="url(#coreGrad)" filter="url(#glow)"/>
+  </g>
+  
+  <!-- Dead Center Data Node -->
+  <circle cx="256" cy="256" r="28" fill="#f97316" filter="url(#glow)" />
+  <circle cx="256" cy="256" r="14" fill="#fff" />
+</svg>
