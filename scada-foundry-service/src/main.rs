@@ -12,13 +12,25 @@ use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
+use clap::Parser;
 
+use crate::config::ApplicationConfiguration;
+
+/// SCADA Foundry Server
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The file containing the server configuration
+    #[arg(short, long)]
+    config_file: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
-    let app_config = 
+    let args = Args::parse();
+    let app_config = ApplicationConfiguration::load(args.config_file.as_str());
 
     let app = Router::new()
         .route("/", get(root))
