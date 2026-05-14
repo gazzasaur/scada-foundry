@@ -1,4 +1,5 @@
 pub mod config;
+pub mod error;
 
 use anyhow::{Error, anyhow};
 use axum::{
@@ -12,17 +13,12 @@ use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::config::iccp::{
-    self, AeTitle, AeTitleMatcher, IccpConfiguration, IccpDataPoint, IccpDataSet,
-    IccpInitiatorControlCenterInformation, IccpPointDataType,
-    IccpResponderControlCenterInformation, InitiatorAuthenticationScheme, InitiatorIccpAssociation,
-    LocalIccpControlCenterMatcher, RemoteIccpControlCenterMatcher, ResponderAuthenticationScheme,
-    ResponderIccpAssociation, ResponderRole, SapAddressMatcher,
-};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
+
+    let app_config = 
 
     let app = Router::new()
         .route("/", get(root))

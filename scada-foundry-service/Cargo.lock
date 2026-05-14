@@ -1071,6 +1071,7 @@ dependencies = [
  "rusty-tpkt",
  "serde",
  "serde_json",
+ "thiserror",
  "tokio",
  "tracing-subscriber",
  "uuid",
