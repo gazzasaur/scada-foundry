@@ -1,33 +1,42 @@
-use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration};
+use std::{
+    sync::{Arc, atomic::Ordering},
+    time::Duration,
+};
 
-use tokio::sync::{RwLock, mpsc};
+use rusty_iccp::RustyIccpClient;
+use tokio::sync::mpsc::{self, UnboundedReceiver, error::TryRecvError};
+use tokio::sync::{RwLock, mpsc::UnboundedSender};
 
-use crate::config::iccp::IccpConfiguration;
+use crate::config::iccp::{IccpConfiguration, InitiatorIccpAssociation};
+
+enum IccpConfigure {
+    CreateInitiator(InitiatorIccpAssociation),
+}
+
+pub enum IccpEvent {
+    State { uuid: String, association: String, state: String },
+}
 
 pub struct IccpManager {
-    running: Arc<AtomicBool>,
-    config: Arc<RwLock<Option<IccpConfiguration>>>,
+    configure: UnboundedSender<IccpConfigure>,
+    listeners: Arc<RwLock<Vec<UnboundedSender<IccpEvent>>>>,
 }
 
 impl IccpManager {
-    pub fn new() -> Self {
-        let running = Arc::new(AtomicBool::new(true));
-        let worker_running = running.clone();
-        let mut worker = IccpManagerWorker { config: Arc::new(RwLock::new(None)) };
+    pub fn new(config: IccpConfiguration) -> Self {
+        let listeners = Arc::new(RwLock::new(Vec::new()));
+        let (configure_sender, configure_receiver) = mpsc::unbounded_channel();
+
+        let mut worker = IccpManagerWorker { configure: configure_receiver, listeners: listeners.clone() };
         tokio::task::spawn(async move {
-            while worker_running.load(Ordering::Acquire) {
-                if !worker.process() {
-                    // Prevent the thread from going to 100% CPU when there is no work to be done.
-                    tokio::time::sleep(Duration::from_millis(1));
-                }
-            }
+            worker.process();
         });
 
-        IccpManager { running: Arc::new(AtomicBool::new(true)), config: Arc::new(RwLock::new(None)) }
-    }
+        for initiator in config.initator_associations {
+            configure_sender.send(IccpConfigure::CreateInitiator(initiator.clone()));
+        }
 
-    pub async fn apply_config(config: IccpConfiguration) {
-        // config.
+        IccpManager { configure: configure_sender, listeners }
     }
 }
 
@@ -37,18 +46,24 @@ impl Drop for IccpManager {
     }
 }
 
-enum IccpManagerWorkerTask {
-
-}
-
 struct IccpManagerWorker {
-    config: Arc<RwLock<Option<IccpConfiguration>>>,
-    task_queue: mpsc::Receiver<IccpManagerWorkerTask>
-    task_queuer: mpsc::Sender<IccpManagerWorkerTask>
+    configure: UnboundedReceiver<IccpConfigure>,
+    listeners: Arc<RwLock<Vec<UnboundedSender<IccpEvent>>>>,
 }
 
 impl IccpManagerWorker {
-    fn process(&mut self) -> bool {
-        return false;
+    async fn process(&mut self) {
+        let initiator_associations: Vec<RustyIccpClient> = Vec::new();
+
+        loop {
+            match self.configure.try_recv() {
+                Ok(IccpConfigure::CreateInitiator(initiator)) => {
+
+                },
+
+                Err(TryRecvError::Empty) => (),
+                Err(TryRecvError::Disconnected) => return,
+            }
+        }
     }
 }

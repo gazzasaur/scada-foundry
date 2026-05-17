@@ -8,7 +8,7 @@ pub struct IccpConfiguration {
     pub responder_associations: Vec<ResponderIccpAssociation>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IccpDataSet {
     pub domain: String,
     pub name: String,
@@ -16,14 +16,14 @@ pub struct IccpDataSet {
     pub points: Vec<IccpDataPoint>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum IccpPointName {
     App(String),
     Vcc(String),
     Icc(String, String),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum IccpPointDataType {
     Real,
     RealQ,
@@ -33,14 +33,14 @@ pub enum IccpPointDataType {
     StateQ,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IccpDataPoint {
     pub uuid: String,
     pub name: IccpPointName,
     pub data_type: IccpPointDataType,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InitiatorIccpAssociation {
     pub uuid: String,
     pub name: String,
@@ -64,7 +64,7 @@ pub struct ResponderIccpAssociation {
     pub points: Vec<IccpDataPoint>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IccpInitiatorControlCenterInformation {
     #[serde(with = "hex")]
     pub tsap_address: Vec<u8>,
@@ -78,7 +78,7 @@ pub struct IccpInitiatorControlCenterInformation {
     pub ae_title: AeTitle,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IccpResponderControlCenterInformation {
     pub host: String,
     pub port: u16,
@@ -95,7 +95,7 @@ pub struct IccpResponderControlCenterInformation {
     pub ae_title: AeTitle,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum InitiatorRole {
     Client
 }
@@ -105,7 +105,7 @@ pub enum ResponderRole {
     Server
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum InitiatorAuthenticationScheme {
     None,
 }
@@ -115,7 +115,7 @@ pub enum ResponderAuthenticationScheme {
     None,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AeTitle {
     pub ap_title: ObjectIdentifier,
 
