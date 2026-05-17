@@ -1,6 +1,5 @@
 use std::{
-    sync::{Arc, atomic::Ordering},
-    time::Duration,
+    error::Error, sync::{Arc, atomic::Ordering}, time::Duration
 };
 
 use rusty_iccp::RustyIccpClient;
@@ -40,10 +39,10 @@ impl IccpManager {
     }
 }
 
-impl Drop for IccpManager {
-    fn drop(&mut self) {
-        self.running.store(false, Ordering::AcqRel);
-    }
+enum InitiatorAssociationState {
+    New(InitiatorIccpAssociation),
+    Connecting(InitiatorIccpAssociation, UnboundedReceiver<Result<RustyIccpClient, Box<dyn Error>>>),
+    // Connected(InitiatorIccpAssociation, RustyIccpClient),
 }
 
 struct IccpManagerWorker {
@@ -53,17 +52,31 @@ struct IccpManagerWorker {
 
 impl IccpManagerWorker {
     async fn process(&mut self) {
-        let initiator_associations: Vec<RustyIccpClient> = Vec::new();
+        let mut initiator_associations: Vec<InitiatorAssociationState> = Vec::new();
 
         loop {
             match self.configure.try_recv() {
                 Ok(IccpConfigure::CreateInitiator(initiator)) => {
-
-                },
+                    initiator_associations.push(InitiatorAssociationState::New(initiator));
+                }
 
                 Err(TryRecvError::Empty) => (),
                 Err(TryRecvError::Disconnected) => return,
             }
+
+            for initiator_association in &initiator_associations {
+                match initiator_association {
+                    InitiatorAssociationState::New(initiator_iccp_association) => {
+                        tokio::task::spawn(future)
+                    },
+                    InitiatorAssociationState::Connecting(initiator_iccp_association) => todo!(),
+                    // InitiatorAssociationState::Connected(initiator_iccp_association, rusty_iccp_client) => todo!(),
+                }
+            }
         }
     }
+}
+
+async fn iccp_initiator_connect() -> Result<RustyIccpClient, Box<dyn Error>> {
+    
 }
