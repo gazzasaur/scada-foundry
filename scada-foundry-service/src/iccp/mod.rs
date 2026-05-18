@@ -1,9 +1,10 @@
 use std::{
-    error::Error, sync::{Arc, atomic::Ordering}, time::Duration
+    error::Error, sync::{Arc, atomic::{AtomicBool, Ordering}}, time::Duration
 };
 
 use rusty_iccp::RustyIccpClient;
-use tokio::sync::mpsc::{self, UnboundedReceiver, error::TryRecvError};
+use rusty_mms_service::{RustyMmsServiceFactory, datapump::MmsServiceDataPump};
+use tokio::sync::{Mutex, mpsc::{self, UnboundedReceiver, error::TryRecvError}};
 use tokio::sync::{RwLock, mpsc::UnboundedSender};
 
 use crate::config::iccp::{IccpConfiguration, InitiatorIccpAssociation};
@@ -26,7 +27,10 @@ impl IccpManager {
         let listeners = Arc::new(RwLock::new(Vec::new()));
         let (configure_sender, configure_receiver) = mpsc::unbounded_channel();
 
-        let mut worker = IccpManagerWorker { configure: configure_receiver, listeners: listeners.clone() };
+        let bindings = Arc::new(Mutex::new(Vec::new()));
+        let data_pump = Arc::new(MmsServiceDataPump::new(Arc::new(AtomicBool::new(true), ), bindings));
+
+        let mut worker = IccpManagerWorker { configure: configure_receiver, listeners: listeners.clone(), data_pump };
         tokio::task::spawn(async move {
             worker.process();
         });
@@ -41,11 +45,13 @@ impl IccpManager {
 
 enum InitiatorAssociationState {
     New(InitiatorIccpAssociation),
-    Connecting(InitiatorIccpAssociation, UnboundedReceiver<Result<RustyIccpClient, Box<dyn Error>>>),
+    // Connecting(InitiatorIccpAssociation, UnboundedReceiver<Result<RustyIccpClient, Box<dyn Error>>>),
     // Connected(InitiatorIccpAssociation, RustyIccpClient),
 }
 
 struct IccpManagerWorker {
+    data_pump: Arc<MmsServiceDataPump>,
+
     configure: UnboundedReceiver<IccpConfigure>,
     listeners: Arc<RwLock<Vec<UnboundedSender<IccpEvent>>>>,
 }
@@ -67,9 +73,9 @@ impl IccpManagerWorker {
             for initiator_association in &initiator_associations {
                 match initiator_association {
                     InitiatorAssociationState::New(initiator_iccp_association) => {
-                        tokio::task::spawn(future)
+                        tokio::task::spawn(iccp_initiator_connect(self.data_pump.clone()));
                     },
-                    InitiatorAssociationState::Connecting(initiator_iccp_association) => todo!(),
+                    // InitiatorAssociationState::Connecting(initiator_iccp_association) => todo!(),
                     // InitiatorAssociationState::Connected(initiator_iccp_association, rusty_iccp_client) => todo!(),
                 }
             }
@@ -77,6 +83,8 @@ impl IccpManagerWorker {
     }
 }
 
-async fn iccp_initiator_connect() -> Result<RustyIccpClient, Box<dyn Error>> {
+// TODO Allow connections to use separate or the same data pumps
+async fn iccp_initiator_connect(data_pump: Arc<MmsServiceDataPump>) {
+    let factory = RustyMmsServiceFactory::new(data_pump);
     
 }
