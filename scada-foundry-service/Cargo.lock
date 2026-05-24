@@ -1167,6 +1167,8 @@ dependencies = [
  "axum",
  "bigdecimal",
  "clap",
+ "der-parser",
+ "futures",
  "hex",
  "num-bigint",
  "oid",
@@ -1182,6 +1184,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tracing",
  "tracing-subscriber",
  "uuid",
 ]

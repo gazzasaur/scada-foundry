@@ -15,7 +15,7 @@ pub mod iccp;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApplicationConfiguration {
-    iccp: IccpConfiguration,
+    pub iccp: IccpConfiguration,
 }
 
 impl ApplicationConfiguration {

@@ -2,20 +2,16 @@ pub mod config;
 pub mod error;
 pub mod iccp;
 
-use anyhow::{Error, anyhow};
+use anyhow::Error;
 use axum::{
     Json, Router,
     http::StatusCode,
     routing::{get, post},
 };
-use num_bigint::BigInt;
-use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
-use tokio::{fs::File, io::AsyncWriteExt};
-use uuid::Uuid;
 use clap::Parser;
 
-use crate::config::ApplicationConfiguration;
+use crate::{config::ApplicationConfiguration, iccp::IccpManager};
 
 /// SCADA Foundry Server
 #[derive(Parser, Debug)]
@@ -31,7 +27,9 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let app_config = ApplicationConfiguration::load(args.config_file.as_str());
+    let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
+
+    let _iccp_manager = IccpManager::new(app_config.iccp);
 
     let app = Router::new()
         .route("/", get(root))
