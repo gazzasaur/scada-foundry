@@ -10,6 +10,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use clap::Parser;
+use tokio::join;
 
 use crate::{config::ApplicationConfiguration, iccp::IccpManager};
 
@@ -18,7 +19,7 @@ use crate::{config::ApplicationConfiguration, iccp::IccpManager};
 #[command(version, about, long_about = None)]
 struct Args {
     /// The file containing the server configuration
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "/home/gaz/scada-foundry/scada-foundry-service/config.json")]
     config_file: String,
 }
 
@@ -29,16 +30,20 @@ async fn main() -> Result<(), Error> {
     let args = Args::parse();
     let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
 
-    let _iccp_manager = IccpManager::new(app_config.iccp);
+    let iccp_manager = IccpManager::new().await;
 
     let app = Router::new()
         .route("/", get(root))
         .route("/users", post(create_user));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
 
-    // TODO Serialise JSON in another thread
+    let y = iccp_manager.serve();
+    let x= axum::serve(listener, app);
+
+    let (_, _) = join!(x, y);
+
+    // // TODO Serialise JSON in another thread
     // let a = IccpConfiguration {
     //     initator_associations: vec![InitiatorIccpAssociation {
     //         uuid: Uuid::new_v4().into(),
@@ -51,7 +56,7 @@ async fn main() -> Result<(), Error> {
     //             psap_address: vec![1],
     //             ae_title: AeTitle {
     //                 ap_title: ObjectIdentifier::try_from("0.1.2.3.1")
-    //                     .map_err(|e| anyhow!("{:?}", e))?,
+    //                     .map_err(|e| anyhow::anyhow!("{:?}", e))?,
     //                 ae_qualifier: 1.into(),
     //             },
     //         },
@@ -63,7 +68,7 @@ async fn main() -> Result<(), Error> {
     //             psap_address: vec![2],
     //             ae_title: AeTitle {
     //                 ap_title: ObjectIdentifier::try_from("0.1.2.3.2")
-    //                     .map_err(|e| anyhow!("{:?}", e))?,
+    //                     .map_err(|e| anyhow::anyhow!("{:?}", e))?,
     //                 ae_qualifier: 1.into(),
     //             },
     //         },
@@ -72,7 +77,7 @@ async fn main() -> Result<(), Error> {
     //             name: "MyDataSet".into(),
     //             points: vec![IccpDataPoint {
     //                 uuid: Uuid::new_v4().into(),
-    //                 name: iccp::IccpPointName::Icc("MyDataSet".into(), "MyPoint".into()),
+    //                 name: IccpPointName::Icc("MyDataSet".into(), "MyPoint".into()),
     //                 data_type: IccpPointDataType::State,
     //             }],
     //         }],
@@ -88,17 +93,18 @@ async fn main() -> Result<(), Error> {
     //             ssap_address: SapAddressMatcher::Any,
     //             psap_address: SapAddressMatcher::Any,
     //             ae_title: AeTitleMatcher::ApTitleOnly(
-    //                 ObjectIdentifier::try_from("0.1.2.3.1").map_err(|e| anyhow!("{:?}", e))?,
+    //                 ObjectIdentifier::try_from("0.1.2.3.1").map_err(|e| anyhow::anyhow!("{:?}", e))?,
     //             ),
     //         },
     //         points: vec![IccpDataPoint {
     //             uuid: Uuid::new_v4().into(),
-    //             name: iccp::IccpPointName::Icc("MyDataSet".into(), "MyPoint".into()),
+    //             name: IccpPointName::Icc("MyDataSet".into(), "MyPoint".into()),
     //             data_type: IccpPointDataType::State,
     //         }],
     //     }],
     // };
-    // let json_data = serde_json::to_vec_pretty(&a)?;
+    // let app_config = ApplicationConfiguration { iccp: a };
+    // let json_data = serde_json::to_vec_pretty(&app_config)?;
 
     // let mut file = File::create("config.json").await?;
     // file.write_all(&json_data).await?;

@@ -29,7 +29,7 @@ impl ApplicationConfiguration {
     }
 
     async fn _try_load_file(filename: &str) -> Result<String, std::io::Error> {
-        let mut file = File::create(filename).await?;
+        let mut file = File::open(filename).await?;
         let mut buffer = String::new();
         file.read_to_string(&mut buffer).await?;
         Ok(buffer)
