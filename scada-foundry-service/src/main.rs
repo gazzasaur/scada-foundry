@@ -27,8 +27,8 @@ struct Args {
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
-    let args = Args::parse();
-    let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
+    // let args = Args::parse();
+    // let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
 
     let iccp_manager = IccpManager::new().await;
 
