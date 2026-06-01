@@ -1,79 +1,81 @@
 {
-  "initator_associations": [
-    {
-      "uuid": "b7e160dc-c9c6-4e64-86cc-ce2836777d6c",
-      "name": "EGX_TO_GAZ",
-      "role": "Client",
-      "authentication": "None",
-      "local_control_center": {
-        "tsap_address": "01",
-        "ssap_address": "01",
-        "psap_address": "01",
-        "ae_title": {
-          "ap_title": "0.1.2.3.1",
-          "ae_qualifier": 1
-        }
-      },
-      "remote_control_center": {
-        "host": "127.0.0.1",
-        "port": 10002,
-        "tsap_address": "02",
-        "ssap_address": "02",
-        "psap_address": "02",
-        "ae_title": {
-          "ap_title": "0.1.2.3.2",
-          "ae_qualifier": 1
-        }
-      },
-      "data_sets": [
-        {
-          "domain": "MyHouse",
-          "name": "MyDataSet",
-          "points": [
-            {
-              "uuid": "6ad80b83-a7e8-4176-8c85-f616272b99d9",
-              "name": {
-                "Icc": [
-                  "MyDataSet",
-                  "MyPoint"
-                ]
-              },
-              "data_type": "State"
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "responder_associations": [
-    {
-      "uuid": "c10e5f98-8276-48c3-b5a3-e921f5ec4f03",
-      "name": "GAZ_TO_EGX",
-      "role": "Server",
-      "authentication": "None",
-      "local_matcher": "Masqurade",
-      "remote_matcher": {
-        "Relaxed": {
-          "tsap_address": "Any",
-          "ssap_address": "Any",
-          "psap_address": "Any",
+  "iccp": {
+    "initator_associations": [
+      {
+        "uuid": "1e2318ed-247f-4f98-9357-c45cef710db4",
+        "name": "RMT_TO_GAZ",
+        "role": "Client",
+        "authentication": "None",
+        "local_control_center": {
+          "tsap_address": "01",
+          "ssap_address": "01",
+          "psap_address": "01",
           "ae_title": {
-            "ApTitleOnly": "0.1.2.3.1"
+            "ap_title": "0.1.2.3.1",
+            "ae_qualifier": 1
           }
-        }
-      },
-      "points": [
-        {
-          "uuid": "3327f66a-02d5-4e5b-a424-1d5662b216fe",
-          "name": {
-            "Icc": [
-              "MyDataSet",
-              "MyPoint"
+        },
+        "remote_control_center": {
+          "host": "127.0.0.1",
+          "port": 8102,
+          "tsap_address": "02",
+          "ssap_address": "02",
+          "psap_address": "02",
+          "ae_title": {
+            "ap_title": "0.1.2.3.2",
+            "ae_qualifier": 1
+          }
+        },
+        "data_sets": [
+          {
+            "domain": "MyHouse",
+            "name": "MyDataSet",
+            "points": [
+              {
+                "uuid": "a4f51b67-69c9-4773-935b-3eb4412ebe17",
+                "name": {
+                  "Icc": [
+                    "MyDataSet",
+                    "MyPoint"
+                  ]
+                },
+                "data_type": "State"
+              }
             ]
-          },
-          "data_type": "State"
-        }
-      ]
-    }
-  ]
+          }
+        ]
+      }
+    ],
+    "responder_associations": [
+      {
+        "uuid": "29aad17d-7d1b-4acf-8b0f-a4476e688284",
+        "name": "GAZ_TO_RMT",
+        "role": "Server",
+        "authentication": "None",
+        "local_matcher": "Masqurade",
+        "remote_matcher": {
+          "Relaxed": {
+            "tsap_address": "Any",
+            "ssap_address": "Any",
+            "psap_address": "Any",
+            "ae_title": {
+              "ApTitleOnly": "0.1.2.3.1"
+            }
+          }
+        },
+        "points": [
+          {
+            "uuid": "d7ec0bad-926b-40e8-86c4-8079205ca587",
+            "name": {
+              "Icc": [
+                "MyDataSet",
+                "MyPoint"
+              ]
+            },
+            "data_type": "State"
+          }
+        ]
+      }
+    ]
+  }
 }

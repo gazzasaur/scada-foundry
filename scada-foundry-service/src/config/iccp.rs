@@ -52,7 +52,7 @@ pub struct InitiatorIccpAssociation {
     pub data_sets: Vec<IccpDataSet>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ResponderIccpAssociation {
     pub uuid: String,
     pub name: String,
@@ -100,7 +100,7 @@ pub enum InitiatorRole {
     Client
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum ResponderRole {
     Server
 }
@@ -110,7 +110,7 @@ pub enum InitiatorAuthenticationScheme {
     None,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum ResponderAuthenticationScheme {
     None,
 }
@@ -123,12 +123,12 @@ pub struct AeTitle {
     pub ae_qualifier: BigDecimal,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum LocalIccpControlCenterMatcher {
     Masqurade,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum RemoteIccpControlCenterMatcher {
     Relaxed {
         tsap_address: SapAddressMatcher,
@@ -138,7 +138,7 @@ pub enum RemoteIccpControlCenterMatcher {
     },
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum SapAddressMatcher {
     Any,
 
@@ -146,7 +146,7 @@ pub enum SapAddressMatcher {
     Exact(Vec<u8>),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum AeTitleMatcher {
     ApTitleOnly(ObjectIdentifier),
 }

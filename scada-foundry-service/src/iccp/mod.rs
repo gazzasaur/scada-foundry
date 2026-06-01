@@ -1,79 +1,145 @@
-use futures::stream::FuturesUnordered;
-use rand::{self};
-use std::cmp::Reverse;
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
-use std::ops::Add;
-use std::pin::Pin;
-use std::sync::RwLock;
-use std::sync::atomic::Ordering;
-use std::sync::{Arc, atomic::AtomicBool};
-use std::time::{Duration, Instant};
-
 use bigdecimal::BigDecimal;
-use der_parser::{Oid, asn1_rs::Any, der::Tag};
+use der_parser::Oid;
+use der_parser::asn1_rs::Any;
+use der_parser::der::Tag;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
-use rusty_mms_service::{MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceFactory, RustyTpktClientConnectionFactory, datapump::MmsServiceDataPump};
+use rusty_mms_service::datapump::MmsServiceDataPump;
+use rusty_mms_service::{MmsInitiatorService, MmsResponderService, MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceFactory, RustyTpktClientConnectionFactory, RustyTpktServerConnectionFactory};
 use rusty_tpkt::{TcpTpktConnection, TcpTpktReader, TcpTpktWriter};
-use tokio::sync::Mutex;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use std::collections::HashMap;
+use std::collections::hash_map::Entry::Vacant;
+use std::pin::Pin;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, atomic::AtomicBool};
+use std::time::Duration;
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tracing::error;
+use uuid::Uuid;
 
-use crate::config::iccp::InitiatorIccpAssociation;
+use tokio::sync::{Mutex, RwLock};
+
+use crate::config::iccp::{InitiatorIccpAssociation, ResponderIccpAssociation};
 
 pub struct IccpManagerAssociation {
     valid: Arc<AtomicBool>,
-    internal: Arc<RwLock<IccpManagerAssociationInternal>>
 }
 
 impl IccpManagerAssociation {
-    pub fn new(valid: Arc<AtomicBool>, internal: Arc<RwLock<IccpManagerAssociationInternal>>) -> Self {
-        Self { valid, internal }
+    pub fn new(valid: Arc<AtomicBool>) -> Self {
+        Self { valid }
     }
 }
 
 impl Drop for IccpManagerAssociation {
     fn drop(&mut self) {
-        self.valid.store(false, Ordering::Acquire);
+        self.valid.store(false, Ordering::SeqCst);
     }
 }
 
-struct IccpManagerAssociationInternal {
-    valid: Arc<AtomicBool>,
+enum IccpManagerWorkerEvent {
+    InitiatorIccpAssociation { state: Arc<RwLock<IccpManagerState>>, uuid: String },
+    ResponderIccpAssociation { state: Arc<RwLock<IccpManagerState>>, uuid: String },
 }
 
-impl IccpManagerAssociationInternal {
-    fn new(valid: Arc<AtomicBool>) -> Self {
-        Self { valid }
-    }
+// FIXME: Use state enum
+#[derive(Clone)]
+pub enum IccpManagerEvent {
+    IccpAssociationStateUpdate(String, String), // State, Reason
+}
 
-    async fn process(&mut self) -> bool {
-        true
+struct IccpManagerState {
+    initiators: HashMap<String, Arc<RwLock<InitiatorIccpAssociationState>>>,
+    responders: HashMap<String, Arc<RwLock<ResponderIccpAssociationState>>>,
+}
+
+#[derive(Clone)]
+struct InitiatorIccpAssociationState {
+    uuid: String,
+    association: InitiatorIccpAssociation,
+    listener: UnboundedSender<IccpManagerEvent>,
+}
+
+#[derive(Clone)]
+struct ResponderIccpAssociationState {
+    uuid: String,
+    association: ResponderIccpAssociation,
+    listener: UnboundedSender<IccpManagerEvent>,
+}
+
+impl IccpManagerState {
+    fn new() -> Self {
+        IccpManagerState { initiators: HashMap::new(), responders: HashMap::new() }
     }
 }
 
 #[derive(Clone)]
 pub struct IccpManager {
-    iccp_associations: HashSet<String>,
-    task_queue: Arc<FuturesUnordered<Pin<Box<dyn Future<Output = ()>>>>>,
+    iccp_manager_state: Arc<RwLock<IccpManagerState>>,
+
+    task_queue: UnboundedSender<IccpManagerWorkerEvent>,
+    receive_queue: Arc<Mutex<UnboundedReceiver<IccpManagerWorkerEvent>>>,
 }
 
 impl IccpManager {
     pub async fn new() -> Self {
-        IccpManager { task_queue: Arc::new(FuturesUnordered::new()) }
+        let (sender, receiver) = mpsc::unbounded_channel();
+        IccpManager { iccp_manager_state: Arc::new(RwLock::new(IccpManagerState::new())), task_queue: sender, receive_queue: Arc::new(Mutex::new(receiver)) }
     }
 
-    pub async fn initiate_iccp_association(&self, association_information: InitiatorIccpAssociation) -> Result<(), anyhow::Error> {
-        // self.task_queue.send(IccpManagerWorkerTask::InitiateIccpAssociation { association_information })?;
-        Ok(())
+    pub async fn initiator_iccp_association(&self, association_information: InitiatorIccpAssociation) -> Result<UnboundedReceiver<IccpManagerEvent>, anyhow::Error> {
+        loop {
+            let uuid = Uuid::new_v4().to_string();
+            let state = self.iccp_manager_state.clone();
+            let mut iccp_manager_state = self.iccp_manager_state.write().await;
+            let (sender, receiver) = unbounded_channel();
+
+            if let Vacant(vacant_entry) = iccp_manager_state.initiators.entry(uuid.clone()) {
+                vacant_entry.insert_entry(Arc::new(RwLock::new(InitiatorIccpAssociationState { uuid: uuid.clone(), association: association_information, listener: sender })));
+                self.task_queue.send(IccpManagerWorkerEvent::InitiatorIccpAssociation { state, uuid }).map_err(|e| anyhow::anyhow!("{e}"))?;
+                return Ok(receiver);
+            }
+        }
     }
 
+    pub async fn responder_iccp_association(&self, association_information: ResponderIccpAssociation) -> Result<UnboundedReceiver<IccpManagerEvent>, anyhow::Error> {
+        loop {
+            let uuid = Uuid::new_v4().to_string();
+            let state = self.iccp_manager_state.clone();
+            let mut iccp_manager_state = self.iccp_manager_state.write().await;
+            let (sender, receiver) = unbounded_channel();
+
+            if let Vacant(vacant_entry) = iccp_manager_state.responders.entry(uuid.clone()) {
+                vacant_entry.insert_entry(Arc::new(RwLock::new(ResponderIccpAssociationState { uuid: uuid.clone(), association: association_information, listener: sender })));
+                self.task_queue.send(IccpManagerWorkerEvent::ResponderIccpAssociation { state, uuid }).map_err(|e| anyhow::anyhow!("{e}"))?;
+                return Ok(receiver);
+            }
+        }
+    }
+
+    // TODO Each thread will have it's own task runner, so it isn't really load balanced.
     pub async fn serve(&self) -> Result<(), anyhow::Error> {
-        let g = self.task_queue.push(Box::pin(async move {
+        let mut task_runner = FuturesUnordered::new();
 
-        }));
-        let f = FuturesUnordered::new();
-        f.push(async { () });
+        loop {
+            let mut receive_queue = self.receive_queue.lock().await;
+            tokio::select! {
+                task = receive_queue.recv() => {
+                    match task {
+                        Some(x) => task_runner.push(iccp_task(x)),
+                        None => return Ok(()),
+                    }
+                }
+                _ = task_runner.next() => {}
+            }
+
+            // let task = self.receive_queue.lock().await.try_recv();
+
+            // tokio::ti task_runner.next().await;
+        }
+
         Ok(())
 
         //     let al = self.listeners.clone();
@@ -118,8 +184,117 @@ impl IccpManager {
     }
 }
 
-enum IccpManagerWorkerTask {
-    InitiateIccpAssociation { association_information: InitiatorIccpAssociation },
+async fn iccp_task(task_info: IccpManagerWorkerEvent) {
+    match task_info {
+        IccpManagerWorkerEvent::InitiatorIccpAssociation { state, uuid } => {
+            iccp_initiator_task(state, uuid).await;
+        }
+        IccpManagerWorkerEvent::ResponderIccpAssociation { state, uuid } => {
+            iccp_responder_task(state, uuid).await;
+        }
+    }
+}
+
+async fn iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) {
+    loop {
+        match try_iccp_initiator_task(state.clone(), uuid.clone()).await {
+            Ok(_) => return,
+            Err(e) => {
+                error!("Failed to connect: {e}");
+                tokio::time::sleep(Duration::from_millis(3000)).await;
+            }
+        };
+    }
+}
+
+async fn try_iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<(), anyhow::Error> {
+    let initiator_iccp_association_state_container = match state.read().await.initiators.get(&uuid) {
+        Some(value) => value.clone(),
+        None => return Ok(()),
+    };
+    let initiator_iccp_association = initiator_iccp_association_state_container.read().await.association.clone();
+
+    let running = Arc::new(AtomicBool::new(true));
+    let bindings: Arc<Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send>>>>> = Arc::new(Mutex::new(vec![]));
+
+    let data_pump = Arc::new(MmsServiceDataPump::new(running, bindings));
+
+    let remote_host = initiator_iccp_association.remote_control_center.host.clone();
+    let remote_port = initiator_iccp_association.remote_control_center.port.clone();
+    let socket_address = format!("{remote_host}:{remote_port}");
+
+    let local_control_center = initiator_iccp_association.local_control_center.clone();
+    let local_ap_title = convert_object_identifier_reported("Failed", "Invalid Local AP Title", initiator_iccp_association_state_container.clone(), &local_control_center.ae_title.ap_title).await?;
+    let local_ae_qualifier = convert_bigdecimal_to_bigint_reported("Failed", "Invalid Local AE Qualifier", initiator_iccp_association_state_container.clone(), &local_control_center.ae_title.ae_qualifier).await?;
+
+    let remote_control_center = initiator_iccp_association.remote_control_center.clone();
+    let remote_ap_title = convert_object_identifier_reported("Failed", "Invalid Local AP Title", initiator_iccp_association_state_container.clone(), &remote_control_center.ae_title.ap_title).await?;
+    let remote_ae_qualifier = convert_bigdecimal_to_bigint_reported("Failed", "Invalid Local AE Qualifier", initiator_iccp_association_state_container.clone(), &remote_control_center.ae_title.ae_qualifier).await?;
+
+    let mut mms_parameters = MmsServiceConnectionParameters::default();
+    mms_parameters.calling = MmsServiceConnectionIdentityParameters {
+        tsap_id: Some(initiator_iccp_association.local_control_center.tsap_address),
+        session_selector: Some(initiator_iccp_association.local_control_center.ssap_address),
+        presentation_selector: Some(initiator_iccp_association.local_control_center.psap_address),
+        ap_title: Some(local_ap_title),
+        ae_qualifier: Some(local_ae_qualifier.to_signed_bytes_be()),
+        ap_invocation_identifier: None,
+        ae_invocation_identifier: None,
+    };
+    mms_parameters.called = MmsServiceConnectionIdentityParameters {
+        tsap_id: Some(initiator_iccp_association.remote_control_center.tsap_address),
+        session_selector: Some(initiator_iccp_association.remote_control_center.ssap_address),
+        presentation_selector: Some(initiator_iccp_association.remote_control_center.psap_address),
+        ap_title: Some(remote_ap_title),
+        ae_qualifier: Some(remote_ae_qualifier.to_signed_bytes_be()),
+        ap_invocation_identifier: None,
+        ae_invocation_identifier: None,
+    };
+
+    let mut tpkt_connection_factory = RustyTpktClientConnectionFactory::new(socket_address.parse()?);
+    let mut factory = RustyMmsServiceFactory::<TcpTpktConnection, TcpTpktReader, TcpTpktWriter>::new(data_pump);
+    let mut connection = factory.create_client_connection(&mut tpkt_connection_factory, mms_parameters).await?;
+
+    connection.receive_information_report().await?;
+
+    Ok(())
+}
+
+async fn iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) {
+    loop {
+        match try_iccp_responder_task(state.clone(), uuid.clone()).await {
+            Ok(_) => return,
+            Err(e) => {
+                error!("Unhandled Error: {e}");
+                tokio::time::sleep(Duration::from_millis(3000)).await;
+            }
+        };
+    }
+}
+
+// FIXME: This should allow multiple associations to use the same TCP connection
+async fn try_iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<(), anyhow::Error> {
+    let responder_iccp_association = match state.read().await.responders.get(&uuid) {
+        Some(value) => value.clone(),
+        None => return Ok(()),
+    };
+
+    let running = Arc::new(AtomicBool::new(true));
+    let bindings: Arc<Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send>>>>> = Arc::new(Mutex::new(vec![]));
+
+    let data_pump = Arc::new(MmsServiceDataPump::new(running, bindings));
+
+    // let remote_host = responder_iccp_association.local_matcher.po;
+    // let remote_port = responder_iccp_association.remote_control_center.port;
+    let socket_address = format!("0.0.0.0:8102");
+
+    let mut tpkt_connection_factory = RustyTpktServerConnectionFactory::listen(socket_address.parse()?).await?;
+    let mut factory = RustyMmsServiceFactory::<TcpTpktConnection, TcpTpktReader, TcpTpktWriter>::new(data_pump);
+    let mut connection = factory.create_server_connection(&mut tpkt_connection_factory, MmsServiceConnectionParameters::default()).await?;
+
+    connection.receive_message().await?;
+
+    Ok(())
 }
 
 // struct ScheduledIccpManagerWorkerTask {
@@ -249,21 +424,45 @@ enum IccpManagerWorkerTask {
 //     Ok(())
 // }
 
-// fn convert_object_identifiers(object_identifier: &ObjectIdentifier) -> Result<Oid<'static>, anyhow::Error> {
-//     let ap_title_vec: Vec<u8> = object_identifier.into();
-//     let ap_title_oid: Oid<'_> = Any::from_tag_and_data(Tag::Oid, ap_title_vec.as_ref()).try_into()?;
-//     Ok(ap_title_oid.to_owned())
-// }
+// TODO: This may also close the association is the listener has no receivers.
+async fn convert_object_identifier_reported(state: &str, reason: &str, association_state: Arc<RwLock<InitiatorIccpAssociationState>>, object_identifier: &ObjectIdentifier) -> Result<Oid<'static>, anyhow::Error> {
+    let ae_title = match convert_object_identifiers(&object_identifier) {
+        Ok(x) => x,
+        Err(e) => {
+            association_state.read().await.listener.send(IccpManagerEvent::IccpAssociationStateUpdate(state.into(), reason.into()));
+            return Err(e);
+        }
+    };
+    Ok(ae_title.to_owned())
+}
 
-// fn convert_bigdecimal_to_bigint(decimal: &BigDecimal) -> Result<BigInt, anyhow::Error> {
-//     let (ae_scaled_int, applied_exponent) = decimal.as_bigint_and_exponent();
-//     if applied_exponent > 0 {
-//         return Err(anyhow::anyhow!("AE Qualifier cannot be 0"));
-//     }
-//     match applied_exponent {
-//         _ if applied_exponent == 0 => Ok(ae_scaled_int),
-//         _ if applied_exponent < i32::MIN as i64 => Err(anyhow::anyhow!("AE Qualifier is too large")),
-//         _ if applied_exponent < 0 => Ok(ae_scaled_int.pow((-1 * applied_exponent) as u32)),
-//         _ => return Err(anyhow::anyhow!("AE Qualifier cannot have a decimal component")),
-//     }
-// }
+fn convert_object_identifiers(object_identifier: &ObjectIdentifier) -> Result<Oid<'static>, anyhow::Error> {
+    let ap_title_vec: Vec<u8> = object_identifier.into();
+    let ap_title_oid: Oid<'_> = Any::from_tag_and_data(Tag::Oid, ap_title_vec.as_ref()).try_into()?;
+    Ok(ap_title_oid.to_owned())
+}
+
+// TODO: This may also close the association is the listener has no receivers.
+async fn convert_bigdecimal_to_bigint_reported(state: &str, reason: &str, association_state: Arc<RwLock<InitiatorIccpAssociationState>>, decimal: &BigDecimal) -> Result<BigInt, anyhow::Error> {
+    let ae_qualifier = match convert_bigdecimal_to_bigint(&decimal) {
+        Ok(x) => x,
+        Err(e) => {
+            association_state.read().await.listener.send(IccpManagerEvent::IccpAssociationStateUpdate(state.into(), reason.into()));
+            return Err(e);
+        }
+    };
+    Ok(ae_qualifier)
+}
+
+fn convert_bigdecimal_to_bigint(decimal: &BigDecimal) -> Result<BigInt, anyhow::Error> {
+    let (ae_scaled_int, applied_exponent) = decimal.as_bigint_and_exponent();
+    if applied_exponent > 0 {
+        return Err(anyhow::anyhow!("AE Qualifier cannot be 0"));
+    }
+    match applied_exponent {
+        _ if applied_exponent == 0 => Ok(ae_scaled_int),
+        _ if applied_exponent < i32::MIN as i64 => Err(anyhow::anyhow!("AE Qualifier is too large")),
+        _ if applied_exponent < 0 => Ok(ae_scaled_int.pow((-1 * applied_exponent) as u32)),
+        _ => return Err(anyhow::anyhow!("AE Qualifier cannot have a decimal component")),
+    }
+}
