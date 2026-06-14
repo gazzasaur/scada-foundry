@@ -11,7 +11,7 @@ pub struct DataPointsManager {
 
 impl DataPointsManager {
     pub fn new() -> Self {
-        DataPointsManager { data_points: Arc::new(RwLock::new(HashMap::new())) }
+        DataPointsManager { data_points: Arc::new(RwLock::new(HashMap::new())), listeners: Arc::new(vec![]) }
     }
 
     pub async fn update_data_point(&self) {
