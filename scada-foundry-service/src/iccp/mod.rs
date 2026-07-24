@@ -1,3 +1,5 @@
+pub mod api;
+
 use bigdecimal::BigDecimal;
 use der_parser::Oid;
 use der_parser::asn1_rs::Any;
@@ -18,13 +20,14 @@ use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tracing::error;
 use uuid::Uuid;
+use rusty_iccp::IccpData;
 
 use tokio::sync::{Mutex, RwLock};
 
 use crate::config::iccp::{InitiatorIccpAssociation, ResponderIccpAssociation};
 
 pub struct IccpManagerAssociation {
-    valid: Arc<AtomicBool>,
+    pub valid: Arc<AtomicBool>,
 }
 
 impl IccpManagerAssociation {
