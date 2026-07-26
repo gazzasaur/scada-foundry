@@ -51,13 +51,9 @@ async fn main() -> Result<(), Error> {
     let x = axum::serve(listener, app);
 
     let a = iccp_manager.clone();
-    tokio::task::spawn(async move {
-        boo(a).await;
-    });
-    let a = iccp_manager.clone();
-    tokio::task::spawn(async move {
-        yeah(a).await;
-    });
+    // tokio::task::spawn(async move {
+    //     boo(a).await;
+    // });
     let a = iccp_manager.clone();
     tokio::task::spawn(async move {
         yeah(a).await;
@@ -103,7 +99,7 @@ async fn boo(a: IccpManager) {
 }
 
 async fn yeah(a: IccpManager) {
-    a.responder_iccp_association(ResponderIccpAssociation {
+    let b = a.responder_iccp_association(ResponderIccpAssociation {
         uuid: Uuid::new_v4().into(),
         name: "EGX_TO_GAZ".into(),
         role: config::iccp::ResponderRole::Server,

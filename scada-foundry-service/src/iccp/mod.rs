@@ -9,7 +9,7 @@ use futures::stream::FuturesUnordered;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
 use rusty_mms_service::datapump::MmsServiceDataPump;
-use rusty_mms_service::{MmsInitiatorService, MmsResponderService, MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceFactory, RustyTpktClientConnectionFactory, RustyTpktServerConnectionFactory};
+use rusty_mms_service::{MmsInitiatorService, MmsResponderService, MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceClient, RustyMmsServiceFactory, RustyMmsServiceServer, RustyTpktClientConnectionFactory, RustyTpktServerConnectionFactory};
 use rusty_tpkt::{TcpTpktConnection, TcpTpktReader, TcpTpktWriter};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::Vacant;
@@ -45,6 +45,8 @@ impl Drop for IccpManagerAssociation {
 enum IccpManagerWorkerEvent {
     InitiatorIccpAssociation { state: Arc<RwLock<IccpManagerState>>, uuid: String },
     ResponderIccpAssociation { state: Arc<RwLock<IccpManagerState>>, uuid: String },
+
+    IccpServerDataTask { state: Arc<RwLock<IccpManagerState>>, uuid: String, client: Box<dyn RustyMmsServiceServer + 'static> },
 }
 
 // FIXME: Use state enum
@@ -130,8 +132,9 @@ impl IccpManager {
             let mut receive_queue = self.receive_queue.lock().await;
             tokio::select! {
                 task = receive_queue.recv() => {
+                    drop(receive_queue);
                     match task {
-                        Some(x) => task_runner.push(iccp_task(x)),
+                        Some(x) => task_runner.push(iccp_task(x, self.task_queue.clone())),
                         None => return Ok(()),
                     }
                 }
@@ -142,59 +145,25 @@ impl IccpManager {
 
             // tokio::ti task_runner.next().await;
         }
-
-        Ok(())
-
-        //     let al = self.listeners.clone();
-        //     let mut all_tasks = FuturesUnordered::new();
-        //     let (request_sender, mut request_receiver): (UnboundedSender<IccpWorkerRequest>, UnboundedReceiver<IccpWorkerRequest>) = mpsc::unbounded_channel();
-
-        //     loop {
-        //         match tokio::time::timeout(Duration::from_millis(100), request_receiver.recv()).await {
-        //             Err(_) => all_tasks.push(Box::pin(async {
-        //                 let data_pump = Arc::new(MmsServiceDataPump::new(Arc::new(AtomicBool::new(true)), Arc::new(Mutex::new(Vec::new()))));
-        //                 iccp_initiator_connect(
-        //                     data_pump,
-        //                     InitiatorIccpAssociation {
-        //                         uuid: "".into(),
-        //                         name: "".into(),
-        //                         role: crate::config::iccp::InitiatorRole::Client,
-        //                         authentication: crate::config::iccp::InitiatorAuthenticationScheme::None,
-        //                         local_control_center: IccpInitiatorControlCenterInformation {
-        //                             tsap_address: vec![],
-        //                             ssap_address: vec![],
-        //                             psap_address: vec![],
-        //                             ae_title: AeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").unwrap(), ae_qualifier: BigDecimal::from(1) },
-        //                         },
-        //                         remote_control_center: IccpResponderControlCenterInformation {
-        //                             host: "".into(),
-        //                             port: 102,
-        //                             tsap_address: vec![],
-        //                             ssap_address: vec![],
-        //                             psap_address: vec![],
-        //                             ae_title: AeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").unwrap(), ae_qualifier: BigDecimal::from(1) },
-        //                         },
-        //                         data_sets: vec![],
-        //                     },
-        //                 )
-        //                 .await;
-        //             })),
-        //             Ok(_) => (),
-        //         };
-        //         println!("Looping4");
-        //         all_tasks.next().await;
-        //     }
     }
 }
 
-async fn iccp_task(task_info: IccpManagerWorkerEvent) {
+async fn iccp_task(task_info: IccpManagerWorkerEvent, receive_queue: UnboundedSender<IccpManagerWorkerEvent>) {
     match task_info {
         IccpManagerWorkerEvent::InitiatorIccpAssociation { state, uuid } => {
             iccp_initiator_task(state, uuid).await;
         }
         IccpManagerWorkerEvent::ResponderIccpAssociation { state, uuid } => {
-            iccp_responder_task(state, uuid).await;
+            match iccp_responder_task(state.clone(), uuid.clone()).await {
+                Some(x) => {
+                    receive_queue.send(IccpManagerWorkerEvent::IccpServerDataTask { state: state.clone(), uuid: uuid.clone(), client: x }).unwrap();
+                },
+                None => return,
+            }
         }
+        IccpManagerWorkerEvent::IccpServerDataTask { state, uuid, mut client } => {
+            client.receive_message().await.unwrap();
+        },
     }
 }
 
@@ -210,17 +179,15 @@ async fn iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: String)
     }
 }
 
-async fn try_iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<(), anyhow::Error> {
+async fn try_iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<Option<Box<dyn RustyMmsServiceClient>>, anyhow::Error> {
     let initiator_iccp_association_state_container = match state.read().await.initiators.get(&uuid) {
         Some(value) => value.clone(),
-        None => return Ok(()),
+        None => return Ok(None),
     };
     let initiator_iccp_association = initiator_iccp_association_state_container.read().await.association.clone();
 
     let running = Arc::new(AtomicBool::new(true));
     let bindings: Arc<Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send>>>>> = Arc::new(Mutex::new(vec![]));
-
-    let data_pump = Arc::new(MmsServiceDataPump::new(running, bindings));
 
     let remote_host = initiator_iccp_association.remote_control_center.host.clone();
     let remote_port = initiator_iccp_association.remote_control_center.port.clone();
@@ -254,19 +221,13 @@ async fn try_iccp_initiator_task(state: Arc<RwLock<IccpManagerState>>, uuid: Str
         ae_invocation_identifier: None,
     };
 
-    let mut tpkt_connection_factory = RustyTpktClientConnectionFactory::new(socket_address.parse()?);
-    let mut factory = RustyMmsServiceFactory::<TcpTpktConnection, TcpTpktReader, TcpTpktWriter>::new(data_pump);
-    let mut connection = factory.create_client_connection(&mut tpkt_connection_factory, mms_parameters).await?;
-
-    connection.receive_information_report().await?;
-
-    Ok(())
+    Ok(Some(rusty_mms_service::create_mms_service_client(socket_address.parse()?, mms_parameters).await?))
 }
 
-async fn iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) {
+async fn iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Option<Box<dyn RustyMmsServiceServer>> {
     loop {
         match try_iccp_responder_task(state.clone(), uuid.clone()).await {
-            Ok(_) => return,
+            Ok(x) => return x,
             Err(e) => {
                 error!("Unhandled Error: {e}");
                 tokio::time::sleep(Duration::from_millis(3000)).await;
@@ -276,28 +237,17 @@ async fn iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String)
 }
 
 // FIXME: This should allow multiple associations to use the same TCP connection
-async fn try_iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<(), anyhow::Error> {
+async fn try_iccp_responder_task(state: Arc<RwLock<IccpManagerState>>, uuid: String) -> Result<Option<Box<dyn RustyMmsServiceServer>>, anyhow::Error> {
     let responder_iccp_association = match state.read().await.responders.get(&uuid) {
         Some(value) => value.clone(),
-        None => return Ok(()),
+        None => return Ok(None),
     };
-
-    let running = Arc::new(AtomicBool::new(true));
-    let bindings: Arc<Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send>>>>> = Arc::new(Mutex::new(vec![]));
-
-    let data_pump = Arc::new(MmsServiceDataPump::new(running, bindings));
 
     // let remote_host = responder_iccp_association.local_matcher.po;
     // let remote_port = responder_iccp_association.remote_control_center.port;
-    let socket_address = format!("0.0.0.0:8102");
+    let socket_address = "0.0.0.0:8102".parse()?;
 
-    let mut tpkt_connection_factory = RustyTpktServerConnectionFactory::listen(socket_address.parse()?).await?;
-    let mut factory = RustyMmsServiceFactory::<TcpTpktConnection, TcpTpktReader, TcpTpktWriter>::new(data_pump);
-    let mut connection = factory.create_server_connection(&mut tpkt_connection_factory, MmsServiceConnectionParameters::default()).await?;
-
-    connection.receive_message().await?;
-
-    Ok(())
+    Ok(Some(rusty_mms_service::create_mms_service_server(socket_address, MmsServiceConnectionParameters::default()).await?))
 }
 
 // struct ScheduledIccpManagerWorkerTask {
