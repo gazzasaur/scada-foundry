@@ -8,9 +8,7 @@ use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
-use rusty_mms_service::datapump::MmsServiceDataPump;
-use rusty_mms_service::{MmsInitiatorService, MmsResponderService, MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceClient, RustyMmsServiceFactory, RustyMmsServiceServer, RustyTpktClientConnectionFactory, RustyTpktServerConnectionFactory};
-use rusty_tpkt::{TcpTpktConnection, TcpTpktReader, TcpTpktWriter};
+use rusty_mms_service::{MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, RustyMmsServiceClient, RustyMmsServiceServer};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::Vacant;
 use std::pin::Pin;
@@ -20,7 +18,6 @@ use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tracing::error;
 use uuid::Uuid;
-use rusty_iccp::IccpData;
 
 use tokio::sync::{Mutex, RwLock};
 

@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface ScadaForgeStatus {
     kind: 'ScadaForgeStatus',
-    connected: false,
+    state: 'Idle' | 'Connecting' | 'Connected' | 'Failed' | 'Healthy',
     message: string,
 }
 
@@ -10,24 +10,29 @@ export interface IccpDataPointUpdate {
     kind: 'IccpDataPointUpdate'
 }
 
+export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpDataPointUpdate;
+
 export class ScadaForgeStreamService {
     private socket: WebSocket;
     private failureCount: number = 0;
+    private serviceConnectionStatus: ScadaForgeStatus = { 'kind': 'ScadaForgeStatus', state: 'Idle', message: 'Client is starting. It will connect shortly.' };
 
-    private listeners: Map<string, (message: ScadaForgeStatus | IccpDataPointUpdate) => void>;
+    private listeners: Map<string, (message: ScadaForgeStreamServiceMessage) => void>;
 
     constructor(private url: string) {
-        let websocketUrl = url;
-
         this.socket = new WebSocket(url);
-        setTimeout(() => this.connectWebSocket(), 3 + Math.ceil(3*Math.random()));
-        this.listeners = new Map<string, (message: ScadaForgeStatus | IccpDataPointUpdate) => void>();
+        setTimeout(() => this.connectWebSocket(), 1000 + Math.ceil(1000 * Math.random()));
+        this.listeners = new Map<string, (message: ScadaForgeStreamServiceMessage) => void>();
     }
 
-    public addListener(listener: (message: ScadaForgeStatus | IccpDataPointUpdate) => void): string {
+    public addListener(listener: (message: ScadaForgeStreamServiceMessage) => void): string {
         for (let i = 0; i < 10; ++i) {
             let key = uuidv4();
+            if (this.listeners.has(key)) {
+                continue;
+            }
             this.listeners.set(key, listener);
+            this.announce(this.serviceConnectionStatus);
             return key;
         }
         throw new Error("Failed to register listener.");
@@ -38,17 +43,29 @@ export class ScadaForgeStreamService {
     }
 
     private connectWebSocket() {
+        this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Connecting', message: 'Attempting to connect to server.' };
+        this.announce(this.serviceConnectionStatus);
+
         this.socket = new WebSocket(this.url);
         this.socket.addEventListener('error', (event) => {
             this.failureCount += 1;
         });
         this.socket.addEventListener('close', (event) => {
-            let backOffJitter = Math.ceil(Math.random()*(this.failureCount > 10 ? 30 : 3));
-            let backOff = (this.failureCount > 10 ? 60 : 3 * this.failureCount) + backOffJitter;
+            if (this.failureCount > 0) {
+                this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Failed', message: 'Client will attempt to reconnect.' };
+            } else {
+                this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Idle', message: 'Client will reconnect.' };
+            }
+            this.announce(this.serviceConnectionStatus);
+
+            let backOffJitter = Math.ceil(Math.random() * (this.failureCount > 10000 ? 30000 : 3000));
+            let backOff = (this.failureCount > 10000 ? 60000 : 3000 * this.failureCount) + backOffJitter;
             setTimeout(() => this.connectWebSocket(), backOff);
         });
         this.socket.addEventListener('open', (event) => {
             this.failureCount = 0;
+            this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Connected', message: 'Connected to server.' };
+            this.announce(this.serviceConnectionStatus);
         });
         this.socket.addEventListener('message', (event) => {
             let message = undefined;
@@ -62,14 +79,17 @@ export class ScadaForgeStreamService {
             if (!message) {
                 return;
             }
-
-            for (let [_, listener] of this.listeners) {
-                try {
-                    return listener(message);
-                } catch (e) {
-                    console.log(`Exception caught during websocket processing: {e}`);
-                }
-            }
+            this.announce(message);
         });
+    }
+
+    private announce(message: ScadaForgeStreamServiceMessage) {
+        for (let [_, listener] of this.listeners) {
+            try {
+                listener(message);
+            } catch (e) {
+                console.log(`Exception caught during websocket processing: {e}`);
+            }
+        }
     }
 }

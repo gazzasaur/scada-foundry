@@ -19,9 +19,9 @@ tracing = "0.1.44"
 async-trait = "0.1"
 thiserror = "2.0.18"
 der-parser = "10.0.0"
-tracing-subscriber = "0.3.23"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 num-bigint = { version = "0.4.6" }
-axum = { version = "0.8.9", features = ["ws"] }
+axum = { version = "0.8.9", features = ["ws", "tokio"] }
 uuid = { version ="1.23.1", features = ["v4"] }
 hex = { version = "0.4.3", features = ["serde"] }
 oid = { version = "0.3.0", features = ["serde"] }
@@ -32,3 +32,5 @@ axum-extra = { version = "0.12.6", features = ["typed-header"] }
 serde_json = { version = "1.0.149", features = ["arbitrary_precision"] }
 futures = "0.3.32"
 rand = "0.10.1"
+
+tower-http = { version = "0.6.1", features = ["fs", "trace"] }

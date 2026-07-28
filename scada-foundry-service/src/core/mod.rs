@@ -14,11 +14,11 @@ impl DataPointsManager {
     }
 
     pub async fn update_data_point(&self) {
-        let data_points: Arc<RwLock<HashMap<String, DataPoint>>> = self.data_points.clone();
+        // let data_points: Arc<RwLock<HashMap<String, DataPoint>>> = self.data_points.clone();
     }
  
     pub async fn serve(&self) {
-        let data_points = self.data_points.clone();
+        // let data_points = self.data_points.clone();
     }
 }
 
@@ -34,7 +34,7 @@ impl DataPointsManagerInternal {
     }
 
     pub async fn update_data_point_value(&self, uuid: &String, value: f64) {
-        let data_points: Arc<RwLock<HashMap<String, DataPoint>>> = self.data_points.clone();
+        // let data_points: Arc<RwLock<HashMap<String, DataPoint>>> = self.data_points.clone();
     }
 
     pub async fn serve(&self) {
