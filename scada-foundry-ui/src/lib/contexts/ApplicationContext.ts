@@ -14,8 +14,9 @@ export class ApplicationContext {
     constructor() {
         this.developmentMode = !!dev;
 
-        let rsUrl = page.url.origin + '/' + resolve('/') + 'app/api';
-        let wsUrl = page.url.origin.replace(/^http/, 'ws') + '/' + resolve('/') + 'app/ws';
+        let rsUrl = resolve("/") + 'app/api';
+        let wsUrl = URL.parse(resolve("/") + 'app/ws', page.url.href)?.href.replace(/^http/, 'ws');
+
         if (this.developmentMode && import.meta.env.VITE_BASE_URL_OVERRIDE) {
             rsUrl = import.meta.env.VITE_BASE_URL_OVERRIDE + 'app/api';
             wsUrl = import.meta.env.VITE_BASE_URL_OVERRIDE + 'app/ws';

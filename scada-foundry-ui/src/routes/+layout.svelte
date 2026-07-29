@@ -105,7 +105,7 @@
 								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
 						{/snippet}
-						<SidebarItem label="Associations" class="mt-1 mb-1" href="/iccp/associations" />
+						<SidebarItem label="Associations" class="mt-1 mb-1" href={resolve("/iccp/associations")} />
 						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/scan" />
 						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/datasets" />
 					</SidebarDropdownWrapper>

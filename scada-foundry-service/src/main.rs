@@ -24,14 +24,21 @@ use futures::{SinkExt, StreamExt};
 use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 use tokio::join;
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tower_http::{
+    cors::CorsLayer,
+    trace::{DefaultMakeSpan, TraceLayer},
+};
 use uuid::Uuid;
 
 use crate::{
-    config::{ApplicationConfiguration, iccp::{
-        AeTitle, AeTitleMatcher, IccpDataPoint, IccpDataSet, IccpInitiatorControlCenterInformation, IccpPointDataType, IccpPointName, IccpResponderControlCenterInformation, InitiatorAuthenticationScheme, InitiatorIccpAssociation,
-        RemoteIccpControlCenterMatcher, ResponderIccpAssociation, SapAddressMatcher,
-    }}, iccp::IccpManager,
+    config::{
+        ApplicationConfiguration,
+        iccp::{
+            AeTitle, AeTitleMatcher, IccpDataPoint, IccpDataSet, IccpInitiatorControlCenterInformation, IccpPointDataType, IccpPointName, IccpResponderControlCenterInformation, InitiatorAuthenticationScheme, InitiatorIccpAssociation,
+            RemoteIccpControlCenterMatcher, ResponderIccpAssociation, SapAddressMatcher,
+        },
+    },
+    iccp::IccpManager,
 };
 
 /// SCADA Foundry Server
@@ -52,7 +59,13 @@ async fn main() -> Result<(), Error> {
 
     let iccp_manager = IccpManager::new().await;
 
-    let app = Router::new().route("/", get(root)).route("/users", post(create_user)).route("/app/ws", any(ws_handler)).layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)));
+    let cors = CorsLayer::permissive();
+    let app = Router::new()
+        .route("/", get(root))
+        .route("/app/api/createiccpassociation", post(create_user))
+        .route("/app/ws", any(ws_handler))
+        .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)))
+        .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
@@ -131,9 +144,29 @@ async fn yeah(a: IccpManager) {
 
 // }
 
-async fn create_user(Json(payload): Json<CreateUser>) -> (StatusCode, Json<User>) {
-    let user = User { id: 1337, username: payload.username };
-    (StatusCode::CREATED, Json(user))
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DataCenterParameters {
+    ap_title: String,
+    ae_qualifier: String,
+    tsap: String,
+    ssap: String,
+    psap: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct IccpAssociation {
+    name: String,
+    association_type: String,
+    host: String,
+    port: u16,
+    local_data_center_parameters: DataCenterParameters,
+    remote_data_center_parameters: DataCenterParameters,
+}
+
+async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {
+    (StatusCode::CREATED, Json(payload))
 }
 
 #[derive(Deserialize)]

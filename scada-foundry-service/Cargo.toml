@@ -33,4 +33,4 @@ serde_json = { version = "1.0.149", features = ["arbitrary_precision"] }
 futures = "0.3.32"
 rand = "0.10.1"
 
-tower-http = { version = "0.6.1", features = ["fs", "trace"] }
+tower-http = { version = "0.6.1", features = ["fs", "trace", "cors"] }

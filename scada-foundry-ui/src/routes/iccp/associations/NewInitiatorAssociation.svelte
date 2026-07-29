@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { getApplicationContext } from '$lib/contexts/ApplicationContext';
-	import { Button, Heading, Input, Label, Modal } from 'flowbite-svelte';
+	import { Button, Heading, Input, Label, Modal, Select } from 'flowbite-svelte';
 
 	const createBlankEntry = () => {
 		return {
 			associationName: '',
+			associationDataCenter: '',
 			associationType: 'Client',
 			associationHost: '',
 			associationPort: 102,
@@ -19,6 +20,10 @@
 			associationLocalPsap: '',
 			associationRemotePsap: ''
 		};
+	};
+
+	const loadDataCenters = async () => {
+
 	};
 
 	let { open = $bindable(false) } = $props();
@@ -36,6 +41,14 @@
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Type</Label>
 			<Input type="text" value={association.associationType} disabled />
+		</div>
+		<div>
+			<Label class="text-heading mb-2.5 block text-sm font-medium">Virtual Control Center</Label>
+			<Select bind:value={association.associationDataCenter} placeholder="Virtual Control Center" required />
+		</div>
+		<div>
+			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
+			<Input type="text" value="None" disabled />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote Host</Label>
@@ -93,10 +106,6 @@
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote PSAP</Label>
 			<Input type="text" bind:value={association.associationRemotePsap} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="([0-9a-zA-Z][0-9a-zA-Z])+" />
 		</div>
-		<div class="col-span-2">
-			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
-			<Input type="text" value="None" disabled />
-		</div>
 	</div>
 
 	{#snippet footer()}
@@ -106,6 +115,7 @@
 			onclick={async () => {
 				await context.getScadaForgeRequestService().createIccpAssociation(
 					association.associationName,
+					association.associationDataCenter,
 					'Client',
 					association.associationHost,
 					association.associationPort,

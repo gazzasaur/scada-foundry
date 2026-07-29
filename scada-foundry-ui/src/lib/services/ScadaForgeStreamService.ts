@@ -13,16 +13,21 @@ export interface IccpDataPointUpdate {
 export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpDataPointUpdate;
 
 export class ScadaForgeStreamService {
-    private socket: WebSocket;
+    private socket: WebSocket | undefined;
+
     private failureCount: number = 0;
     private serviceConnectionStatus: ScadaForgeStatus = { 'kind': 'ScadaForgeStatus', state: 'Idle', message: 'Client is starting. It will connect shortly.' };
 
     private listeners: Map<string, (message: ScadaForgeStreamServiceMessage) => void>;
 
-    constructor(private url: string) {
-        this.socket = new WebSocket(url);
-        setTimeout(() => this.connectWebSocket(), 1000 + Math.ceil(1000 * Math.random()));
+    constructor(private url: string | undefined) {
         this.listeners = new Map<string, (message: ScadaForgeStreamServiceMessage) => void>();
+        if (url) {
+            this.socket = new WebSocket(url);
+            setTimeout(() => this.connectWebSocket(), 1000 + Math.ceil(1000 * Math.random()));
+        } else {
+            this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Failed', message: 'Cannot determine websocket url.' };
+        }
     }
 
     public addListener(listener: (message: ScadaForgeStreamServiceMessage) => void): string {
@@ -43,6 +48,12 @@ export class ScadaForgeStreamService {
     }
 
     private connectWebSocket() {
+        if (!this.url) {
+            this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Failed', message: 'Cannot determine websocket url.' };
+            this.announce(this.serviceConnectionStatus);
+            return;
+        }
+
         this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Connecting', message: 'Attempting to connect to server.' };
         this.announce(this.serviceConnectionStatus);
 
