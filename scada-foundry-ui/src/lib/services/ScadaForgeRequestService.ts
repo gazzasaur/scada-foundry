@@ -9,14 +9,18 @@ export interface DataCenterParameters {
 }
 
 export interface IccpInitiatorAssociation {
-    
+
 }
 
 export class ScadaForgeRequestService {
     constructor(private url: string) {
     }
 
-    public createIccpAssociation(name: string, associationType: AssociationType, host: string, port: number, localDataCenterParameters: DataCenterParameters, remoteDataCenterParameters: DataCenterParameters) {
-
+    public async createIccpAssociation(name: string, associationType: AssociationType, host: string, port: number, localDataCenterParameters: DataCenterParameters, remoteDataCenterParameters: DataCenterParameters) {
+        fetch('/createiccpassociation', {
+            method: 'POST', body: JSON.stringify({
+                name, associationType, host, port, localDataCenterParameters, remoteDataCenterParameters
+            })
+        });
     }
 }

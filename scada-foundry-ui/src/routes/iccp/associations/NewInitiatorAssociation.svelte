@@ -103,8 +103,27 @@
 		<Button
 			type="submit"
 			color="primary"
-			onclick={() => {
-				context.getScadaForgeStreamService()
+			onclick={async () => {
+				await context.getScadaForgeRequestService().createIccpAssociation(
+					association.associationName,
+					'Client',
+					association.associationHost,
+					association.associationPort,
+					{
+						apTitle: association.associationLocalApTitle,
+						aeQualifier: association.associationLocalAeQualifier,
+						tsap: association.associationLocalTsap,
+						ssap: association.associationLocalSsap,
+						psap: association.associationLocalPsap
+					},
+					{
+						apTitle: association.associationRemoteApTitle,
+						aeQualifier: association.associationRemoteAeQualifier,
+						tsap: association.associationRemoteTsap,
+						ssap: association.associationRemoteSsap,
+						psap: association.associationRemotePsap
+					}
+				);
 				association = createBlankEntry();
 				open = false;
 			}}>Create</Button

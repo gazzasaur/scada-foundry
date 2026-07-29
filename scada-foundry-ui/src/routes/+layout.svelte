@@ -94,7 +94,7 @@
 				isSingle={false}
 			>
 				<SidebarGroup>
-					<SidebarItem label="Overview" href={resolve('/')}>
+					<SidebarItem label="Overview" class="mt-1 mb-1" href={resolve('/')}>
 						{#snippet icon()}
 							<img class="w-5" src={scadaFoundryButtonIcon} alt="SCADA Foundry Button" />
 						{/snippet}
@@ -105,9 +105,9 @@
 								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
 						{/snippet}
-						<SidebarItem label="Associations" href="/iccp/associations" />
-						<SidebarItem label="Scan" href="/iccp/scan" />
-						<SidebarItem label="Scan" href="/iccp/datasets" />
+						<SidebarItem label="Associations" class="mt-1 mb-1" href="/iccp/associations" />
+						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/scan" />
+						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/datasets" />
 					</SidebarDropdownWrapper>
 					<SidebarDropdownWrapper label="DNP3" classes={{ btn: 'p-2' }} isOpen={matchesRoute}>
 						{#snippet icon()}
@@ -115,7 +115,7 @@
 								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
 						{/snippet}
-						<SidebarItem label="Coming Soon" href="/" />
+						<SidebarItem label="Coming Soon" class="mt-1 mb-1" href="/" />
 					</SidebarDropdownWrapper>
 				</SidebarGroup>
 			</Sidebar>
