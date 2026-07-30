@@ -7,8 +7,7 @@ use tokio::{
 };
 
 use crate::{
-    config::iccp::IccpConfiguration,
-    error::{ScadaFoundryError, to_app_error},
+    config::iccp::IccpConfiguration, error::{ScadaFoundryError, to_app_error}, iccp::IccpSubsystem,
 };
 
 pub mod iccp;
@@ -22,6 +21,10 @@ impl ApplicationConfiguration {
     pub async fn load(filename: &str) -> Result<ApplicationConfiguration, ScadaFoundryError> {
         let config_string: String = ApplicationConfiguration::_try_load_file(filename).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))?;
         ApplicationConfiguration::_try_parse(config_string).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))
+    }
+
+    pub async fn sync_iccp_subsystem(subsystem: IccpSubsystem) {
+
     }
 
     pub async fn save(&self, filename: &str) -> Result<(), ScadaFoundryError> {

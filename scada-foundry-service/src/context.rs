@@ -7,10 +7,10 @@ use anyhow::anyhow;
 use rusty_iccp::IccpData::{self, RealQ};
 use tokio::sync::mpsc::Sender;
 
-use crate::iccp::api::{IccpDataCenter, IccpDataPointKey, IccpDataPointValue, IccpSubsystemEvent};
+use crate::{IccpAssociation, iccp::api::{IccpDataPointKey, IccpDataPointValue, IccpSubsystemEvent}};
 
 pub struct IccpSubsystem {
-    data_centers: HashMap<String, IccpDataCenter>,
+    associations: HashMap<String, IccpAssociation>,
     data_points: HashMap<IccpDataPointKey, IccpDataPointValue>,
 
     listener: Sender<IccpSubsystemEvent>,

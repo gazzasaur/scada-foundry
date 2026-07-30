@@ -3,119 +3,31 @@ use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct IccpConfiguration {
-    pub initator_associations: Vec<InitiatorIccpAssociation>,
-    pub responder_associations: Vec<ResponderIccpAssociation>,
+#[serde(rename_all = "camelCase")]
+pub enum IccpAssociationType {
+    ClientUnidirectional,
+    ClientBidirectional,
+    ServerUnidirectional,
+    ServerBidirectional,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct IccpDataSet {
-    pub domain: String,
-    pub name: String,
-
-    pub points: Vec<IccpDataPoint>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum IccpPointName {
-    App(String),
-    Vcc(String),
-    Icc(String, String),
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum IccpPointDataType {
-    Real,
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum IccpDataPointType {
     RealQ,
-    Discrete,
-    DiscreteQ,
-    State,
-    StateQ,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct IccpDataPoint {
-    pub uuid: String,
-    pub name: IccpPointName,
-    pub data_type: IccpPointDataType,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct InitiatorIccpAssociation {
-    pub uuid: String,
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpDataPointSpecification {
+    pub id: String,
     pub name: String,
-    pub role: InitiatorRole,
-    pub authentication: InitiatorAuthenticationScheme,
-    pub local_control_center: IccpInitiatorControlCenterInformation,
-    pub remote_control_center: IccpResponderControlCenterInformation,
-
-    pub data_sets: Vec<IccpDataSet>,
+    pub domain: Option<String>,
+    pub data_point_type: IccpDataPointType,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ResponderIccpAssociation {
-    pub uuid: String,
-    pub name: String,
-    pub role: ResponderRole,
-    pub authentication: ResponderAuthenticationScheme,
-    pub local_matcher: LocalIccpControlCenterMatcher,
-    pub remote_matcher: RemoteIccpControlCenterMatcher,
-
-    pub points: Vec<IccpDataPoint>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct IccpInitiatorControlCenterInformation {
-    #[serde(with = "hex")]
-    pub tsap_address: Vec<u8>,
-
-    #[serde(with = "hex")]
-    pub ssap_address: Vec<u8>,
-
-    #[serde(with = "hex")]
-    pub psap_address: Vec<u8>,
-
-    pub ae_title: AeTitle,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct IccpResponderControlCenterInformation {
-    pub host: String,
-    pub port: u16,
-    
-    #[serde(with = "hex")]
-    pub tsap_address: Vec<u8>,
-
-    #[serde(with = "hex")]
-    pub ssap_address: Vec<u8>,
-
-    #[serde(with = "hex")]
-    pub psap_address: Vec<u8>,
-
-    pub ae_title: AeTitle,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum InitiatorRole {
-    Client
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum ResponderRole {
-    Server
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum InitiatorAuthenticationScheme {
-    None,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum ResponderAuthenticationScheme {
-    None,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AeTitle {
     pub ap_title: ObjectIdentifier,
 
@@ -123,30 +35,51 @@ pub struct AeTitle {
     pub ae_qualifier: BigDecimal,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum LocalIccpControlCenterMatcher {
-    Masqurade,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum RemoteIccpControlCenterMatcher {
-    Relaxed {
-        tsap_address: SapAddressMatcher,
-        ssap_address: SapAddressMatcher,
-        psap_address: SapAddressMatcher,
-        ae_title: AeTitleMatcher,
-    },
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum SapAddressMatcher {
-    Any,
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpDataCenterSetSpecification {
+    pub ae_title: AeTitle,
 
     #[serde(with = "hex")]
-    Exact(Vec<u8>),
+    pub tsap_address: Vec<u8>,
+
+    #[serde(with = "hex")]
+    pub ssap_address: Vec<u8>,
+
+    #[serde(with = "hex")]
+    pub psap_address: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum AeTitleMatcher {
-    ApTitleOnly(ObjectIdentifier),
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpTransferSetSpecification {}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpAssociation {
+    pub id: String,
+    pub name: String,
+
+    pub connection_domain: String,
+    pub connection_bilateral_tablw: String,
+
+    pub association_type: IccpAssociationType,
+
+    pub host: String,
+    pub port: u16,
+
+    pub local_data_center: IccpDataCenterSetSpecification,
+    pub remote_data_center: IccpDataCenterSetSpecification,
+
+    pub local_data_points: Vec<IccpDataPointSpecification>,
+    pub remote_data_points: Vec<IccpDataPointSpecification>,
+
+    pub transfer_sets: Vec<IccpTransferSetSpecification>,
+    // TODO Devices
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpConfiguration {
+    pub associations: Vec<IccpAssociation>,
 }
