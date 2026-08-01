@@ -20,7 +20,7 @@ async-trait = "0.1"
 thiserror = "2.0.18"
 der-parser = "10.0.0"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-num-bigint = { version = "0.4.6" }
+num-bigint = { version = "0.4.6", features = ["serde"] }
 axum = { version = "0.8.9", features = ["ws", "tokio"] }
 uuid = { version ="1.23.1", features = ["v4"] }
 hex = { version = "0.4.3", features = ["serde"] }

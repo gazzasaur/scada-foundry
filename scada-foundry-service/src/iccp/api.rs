@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use num_bigint::BigInt;
+use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -44,14 +47,49 @@ pub struct IccpAssociationStatus {
     state: IccpAssociationState,
 }
 
-pub struct IccpAssociation {
-    id: String,
-    name: String,
-
-    status: IccpAssociationStatus,
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum IccpAssociationType {
+    CientUnidirectional,
+    ServerUnidirectional,
+    CientBidirectional,
+    ServerBidirectional,
 }
 
-pub enum IccpSubsystemEvent {
-    DataCenterState(IccpAssociationStatus),
-    DataPointUpdate(IccpDataPointValue),
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpAeTitle {
+    pub ap_title: ObjectIdentifier,
+    pub ae_qualifier: BigInt,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpDataCenterParameters {
+    pub ae_title: IccpAeTitle,
+
+    #[serde(with = "hex")]
+    pub tsap: Vec<u8>,
+
+    #[serde(with = "hex")]
+    pub ssap: Vec<u8>,
+
+    #[serde(with = "hex")]
+    pub psap: Vec<u8>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpAssociation {
+    pub id: String,
+    pub name: String,
+    pub association_type: IccpAssociationType,
+
+    pub domain: String,
+    pub bilateral_table: String,
+
+    pub host: String,
+    pub port: u16,
+    pub local_data_center_parameters: IccpDataCenterParameters,
+    pub remote_data_center_parameters: IccpDataCenterParameters,
 }

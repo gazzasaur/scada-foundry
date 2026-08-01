@@ -2,6 +2,8 @@ use bigdecimal::BigDecimal;
 use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 
+use crate::iccp::api::IccpAssociation;
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IccpAssociationType {
@@ -53,30 +55,6 @@ pub struct IccpDataCenterSetSpecification {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpTransferSetSpecification {}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IccpAssociation {
-    pub id: String,
-    pub name: String,
-
-    pub connection_domain: String,
-    pub connection_bilateral_tablw: String,
-
-    pub association_type: IccpAssociationType,
-
-    pub host: String,
-    pub port: u16,
-
-    pub local_data_center: IccpDataCenterSetSpecification,
-    pub remote_data_center: IccpDataCenterSetSpecification,
-
-    pub local_data_points: Vec<IccpDataPointSpecification>,
-    pub remote_data_points: Vec<IccpDataPointSpecification>,
-
-    pub transfer_sets: Vec<IccpTransferSetSpecification>,
-    // TODO Devices
-}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

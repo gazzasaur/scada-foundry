@@ -1,3 +1,4 @@
+pub mod api;
 pub mod config;
 mod context;
 pub mod core;
@@ -19,15 +20,21 @@ use axum::{
 };
 use axum_extra::{TypedHeader, headers};
 use clap::Parser;
+use num_bigint::BigInt;
+use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
-use tokio::join;
+use tokio::{join, sync::mpsc::unbounded_channel};
 use tower_http::{
     cors::CorsLayer,
     trace::{DefaultMakeSpan, TraceLayer},
 };
 
 use crate::{
-    config::ApplicationConfiguration, iccp::IccpSubsystem,
+    config::ApplicationConfiguration,
+    iccp::{
+        IccpSubsystem,
+        api::{IccpAeTitle, IccpAssociation, IccpAssociationType, IccpDataCenterParameters},
+    },
 };
 
 /// SCADA Foundry Server
@@ -44,12 +51,60 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
+    let mut app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
 
-    let mut iccp_manager = IccpSubsystem::new().await;
+    app_config.iccp.associations.push(IccpAssociation {
+                id: "my-id".into(),
+                name: "my-name".into(),
+                association_type: IccpAssociationType::CientUnidirectional,
+                domain: "my-domain".into(),
+                bilateral_table: "my-table".into(),
+                host: "127.0.0.1".into(),
+                port: 102,
+                local_data_center_parameters: IccpDataCenterParameters {
+                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
+                    tsap: vec![0],
+                    ssap: vec![0],
+                    psap: vec![0],
+                },
+                remote_data_center_parameters: IccpDataCenterParameters {
+                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
+                    tsap: vec![0],
+                    ssap: vec![0],
+                    psap: vec![0],
+                },
+            });
+
+    app_config.save(args.config_file.as_str()).await?;
+
+    let (global_listener_sender, global_listener_receiver) = unbounded_channel();
+
+    let mut iccp_manager = IccpSubsystem::new(global_listener_sender).await;
 
     for iccp_association in app_config.iccp.associations {
-        iccp_manager.create_association(iccp_association).await?;
+        iccp_manager
+            .create_association(IccpAssociation {
+                id: "my-id".into(),
+                name: "my-name".into(),
+                association_type: IccpAssociationType::CientUnidirectional,
+                domain: "my-domain".into(),
+                bilateral_table: "my-table".into(),
+                host: "127.0.0.1".into(),
+                port: 102,
+                local_data_center_parameters: IccpDataCenterParameters {
+                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
+                    tsap: vec![0],
+                    ssap: vec![0],
+                    psap: vec![0],
+                },
+                remote_data_center_parameters: IccpDataCenterParameters {
+                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
+                    tsap: vec![0],
+                    ssap: vec![0],
+                    psap: vec![0],
+                },
+            })
+            .await?;
     }
 
     let cors = CorsLayer::permissive();
@@ -126,26 +181,17 @@ async fn root() -> &'static str {
 
 // }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DataCenterParameters {
-    ap_title: String,
-    ae_qualifier: String,
-    tsap: String,
-    ssap: String,
-    psap: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct IccpAssociation {
-    name: String,
-    association_type: String,
-    host: String,
-    port: u16,
-    local_data_center_parameters: DataCenterParameters,
-    remote_data_center_parameters: DataCenterParameters,
-}
+// #[derive(Clone, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// struct IccpAssociation {
+//     id: String,
+//     name: String,
+//     association_type: String,
+//     host: String,
+//     port: u16,
+//     local_data_center_parameters: DataCenterParameters,
+//     remote_data_center_parameters: DataCenterParameters,
+// }
 
 async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {
     (StatusCode::CREATED, Json(payload))

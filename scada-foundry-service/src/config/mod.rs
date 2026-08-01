@@ -24,7 +24,6 @@ impl ApplicationConfiguration {
     }
 
     pub async fn sync_iccp_subsystem(subsystem: IccpSubsystem) {
-
     }
 
     pub async fn save(&self, filename: &str) -> Result<(), ScadaFoundryError> {
