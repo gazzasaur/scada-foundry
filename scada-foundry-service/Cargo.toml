@@ -13,7 +13,7 @@ rusty-mms = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-mms-service = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-tpkt = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 
-serde = "1.0.228"
+serde = { version = "1.0.228", features = ["derive"] }
 anyhow = "1.0.102"
 tracing = "0.1.44"
 async-trait = "0.1"
@@ -29,7 +29,7 @@ clap = { version = "4.6.1", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["full"] }
 bigdecimal = { version = "0.4", features = [ "serde-json" ] }
 axum-extra = { version = "0.12.6", features = ["typed-header"] }
-serde_json = { version = "1.0.149", features = ["arbitrary_precision"] }
+serde_json = { version = "1.0.149", features = ["arbitrary_precision", "raw_value"] }
 futures = "0.3.32"
 rand = "0.10.1"
 

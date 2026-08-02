@@ -7,7 +7,9 @@ use tokio::{
 };
 
 use crate::{
-    config::iccp::IccpConfiguration, error::{ScadaFoundryError, to_app_error}, iccp::IccpSubsystem,
+    config::iccp::IccpConfiguration,
+    error::{ScadaFoundryError, to_app_error},
+    iccp::IccpSubsystem,
 };
 
 pub mod iccp;
@@ -18,13 +20,16 @@ pub struct ApplicationConfiguration {
 }
 
 impl ApplicationConfiguration {
+    pub async fn new() -> Self {
+        Self { iccp: IccpConfiguration { associations: vec![] } }
+    }
+
     pub async fn load(filename: &str) -> Result<ApplicationConfiguration, ScadaFoundryError> {
         let config_string: String = ApplicationConfiguration::_try_load_file(filename).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))?;
         ApplicationConfiguration::_try_parse(config_string).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))
     }
 
-    pub async fn sync_iccp_subsystem(subsystem: IccpSubsystem) {
-    }
+    pub async fn sync_iccp_subsystem(subsystem: IccpSubsystem) {}
 
     pub async fn save(&self, filename: &str) -> Result<(), ScadaFoundryError> {
         self._try_save(filename).await.map_err(to_app_error(format!("Failed to save application configuration: {filename}").as_str())).into()
@@ -42,9 +47,9 @@ impl ApplicationConfiguration {
     }
 
     async fn _try_save(&self, filename: &str) -> Result<(), std::io::Error> {
-        let json_data = serde_json::to_vec_pretty(self)?;
+        let json_data = serde_json::to_string(self)?;
         let mut file = File::create(filename).await?;
-        file.write_all(&json_data).await?;
+        file.write_all(&json_data.as_bytes()).await?;
 
         Ok(())
     }

@@ -52,59 +52,38 @@ async fn main() -> Result<(), Error> {
 
     let args = Args::parse();
     let mut app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
+    // let mut app_config = ApplicationConfiguration::new().await;
 
     app_config.iccp.associations.push(IccpAssociation {
-                id: "my-id".into(),
-                name: "my-name".into(),
-                association_type: IccpAssociationType::CientUnidirectional,
-                domain: "my-domain".into(),
-                bilateral_table: "my-table".into(),
-                host: "127.0.0.1".into(),
-                port: 102,
-                local_data_center_parameters: IccpDataCenterParameters {
-                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
-                    tsap: vec![0],
-                    ssap: vec![0],
-                    psap: vec![0],
-                },
-                remote_data_center_parameters: IccpDataCenterParameters {
-                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
-                    tsap: vec![0],
-                    ssap: vec![0],
-                    psap: vec![0],
-                },
-            });
+        id: "my-id".into(),
+        name: "my-name".into(),
+        association_type: IccpAssociationType::ClientUnidirectional,
+        domain: "my-domain".into(),
+        bilateral_table: "my-table".into(),
+        host: "127.0.0.1".into(),
+        port: 102,
+        local_data_center_parameters: IccpDataCenterParameters {
+            ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(10000000) },
+            tsap: vec![0],
+            ssap: vec![0],
+            psap: vec![0],
+        },
+        remote_data_center_parameters: IccpDataCenterParameters {
+            ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
+            tsap: vec![0],
+            ssap: vec![0],
+            psap: vec![0],
+        },
+    });
 
     app_config.save(args.config_file.as_str()).await?;
 
-    let (global_listener_sender, global_listener_receiver) = unbounded_channel();
+    let (global_listener_sender, _global_listener_receiver) = unbounded_channel();
 
     let mut iccp_manager = IccpSubsystem::new(global_listener_sender).await;
 
     for iccp_association in app_config.iccp.associations {
-        iccp_manager
-            .create_association(IccpAssociation {
-                id: "my-id".into(),
-                name: "my-name".into(),
-                association_type: IccpAssociationType::CientUnidirectional,
-                domain: "my-domain".into(),
-                bilateral_table: "my-table".into(),
-                host: "127.0.0.1".into(),
-                port: 102,
-                local_data_center_parameters: IccpDataCenterParameters {
-                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
-                    tsap: vec![0],
-                    ssap: vec![0],
-                    psap: vec![0],
-                },
-                remote_data_center_parameters: IccpDataCenterParameters {
-                    ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
-                    tsap: vec![0],
-                    ssap: vec![0],
-                    psap: vec![0],
-                },
-            })
-            .await?;
+        iccp_manager.create_association(iccp_association).await?;
     }
 
     let cors = CorsLayer::permissive();

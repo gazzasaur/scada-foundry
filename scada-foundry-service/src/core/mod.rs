@@ -16,7 +16,7 @@ impl DataPointsManager {
     pub async fn update_data_point(&self) {
         // let data_points: Arc<RwLock<HashMap<String, DataPoint>>> = self.data_points.clone();
     }
- 
+
     pub async fn serve(&self) {
         // let data_points = self.data_points.clone();
     }
@@ -57,7 +57,6 @@ pub struct DataPoint {
 
     // Event Timestamp Source (Local)
     // Locally Updated Timestamp
-
     pub value_updated: SystemTime,
     pub value_received: SystemTime,
     pub status_updated: SystemTime,

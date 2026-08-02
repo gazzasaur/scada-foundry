@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
-use async_trait::async_trait;
+use crate::iccp::converter::deserialise_bigint;
+use crate::iccp::converter::serialise_bigint;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum IccpDataPointName {
@@ -40,19 +38,19 @@ pub enum IccpAssociationState {
 }
 
 pub struct IccpAssociationStatus {
-    id: String,
-    name: String,
-    enabled: bool,
-    status_description: String,
-    state: IccpAssociationState,
+    pub id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub status_description: String,
+    pub state: IccpAssociationState,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum IccpAssociationType {
-    CientUnidirectional,
+    ClientUnidirectional,
     ServerUnidirectional,
-    CientBidirectional,
+    ClientBidirectional,
     ServerBidirectional,
 }
 
@@ -60,6 +58,8 @@ pub enum IccpAssociationType {
 #[serde(rename_all = "camelCase")]
 pub struct IccpAeTitle {
     pub ap_title: ObjectIdentifier,
+
+    #[serde(serialize_with = "serialise_bigint", deserialize_with = "deserialise_bigint")]
     pub ae_qualifier: BigInt,
 }
 

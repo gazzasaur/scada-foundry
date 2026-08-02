@@ -1,17 +1,6 @@
-use bigdecimal::BigDecimal;
-use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 
-use crate::iccp::api::IccpAssociation;
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum IccpAssociationType {
-    ClientUnidirectional,
-    ClientBidirectional,
-    ServerUnidirectional,
-    ServerBidirectional,
-}
+use crate::iccp::api::{IccpAeTitle, IccpAssociation};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,19 +17,19 @@ pub struct IccpDataPointSpecification {
     pub data_point_type: IccpDataPointType,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AeTitle {
-    pub ap_title: ObjectIdentifier,
+// #[derive(Clone, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct AeTitle {
+//     pub ap_title: ObjectIdentifier,
 
-    #[serde(with = "bigdecimal::serde::json_num")]
-    pub ae_qualifier: BigDecimal,
-}
+//     #[serde(with = "bigdecimal::serde::json_num")]
+//     pub ae_qualifier: BigDecimal,
+// }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpDataCenterSetSpecification {
-    pub ae_title: AeTitle,
+    pub ae_title: IccpAeTitle,
 
     #[serde(with = "hex")]
     pub tsap_address: Vec<u8>,

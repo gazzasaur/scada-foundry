@@ -3,17 +3,32 @@ use std::{
         HashMap,
         hash_map::Entry::{Occupied, Vacant},
     },
-    sync::{Arc, atomic::AtomicBool},
+    sync::Arc,
+    time::Duration,
 };
 
-use rusty_iccp::{IccpClient, RustyIccpClient};
-use rusty_mms::MmsInitiator;
+use rand::random_range;
+use rusty_mms::parameters::{
+    ParameterSupportOption::{Str1, Str2, Vlis, Vnam},
+    ServiceSupportOption::{Conclude, DefineNamedVariableList, DeleteNamedVariableList, GetNameList, GetNamedVariableListAttribute, GetVariableAccessAttributes, Identify, InformationReport, Read, Write},
+};
+use rusty_mms_service::{MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, create_mms_service_client};
 use tokio::sync::{
     RwLock,
-    mpsc::{self, Receiver, Sender, UnboundedReceiver, UnboundedSender, error::TryRecvError},
+    mpsc::{self, UnboundedReceiver, UnboundedSender, error::TryRecvError},
 };
 
-use crate::{api::ScadaFoundryEvent, error::ScadaFoundryError, iccp::api::IccpAssociation};
+use crate::{
+    api::ScadaFoundryEvent,
+    error::ScadaFoundryError,
+    iccp::{
+        api::{
+            IccpAssociation, IccpAssociationState, IccpAssociationStatus,
+            IccpAssociationType::{ClientBidirectional, ClientUnidirectional},
+        },
+        converter::convert_object_identifiers,
+    },
+};
 
 pub mod api;
 pub mod converter;
@@ -29,14 +44,32 @@ impl IccpSubsystemAssociationState {
         let (signalling_sender, signalling_receiver) = mpsc::unbounded_channel();
         let (term_sender, term_receiver) = mpsc::unbounded_channel();
 
-        let operator = Arc::new(RwLock::new(IccpSubsystemAssociationOperator { association: association.clone(), signalling_queue: signalling_receiver, terminate_queue: term_sender, listener }));
-        tokio::task::spawn(IccpSubsystemAssociationOperator::initiate(operator));
-
+        let local_association = association.clone();
+        let operator = Arc::new(RwLock::new(IccpSubsystemAssociationOperator { association: association.clone(), signalling_queue: signalling_receiver, terminate_queue: term_sender, listener: listener.clone() }));
+        tokio::task::spawn(async move {
+            loop {
+                let send_result = match IccpSubsystemAssociationOperator::initialise(operator.clone()).await {
+                    Ok(_) => break,
+                    Err(e) => listener.send(ScadaFoundryEvent::IccpAssociationUpdate(IccpAssociationStatus {
+                        id: local_association.clone().read().await.id.clone(),
+                        name: local_association.read().await.name.clone(),
+                        enabled: true,
+                        status_description: format!("{e}"),
+                        state: IccpAssociationState::Failed,
+                    })),
+                };
+                if let Err(_) = send_result {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_secs(10 + random_range(1..10))).await;
+            }
+        });
         return Self { association: association, signalling_queue: signalling_sender, terminate_queue: term_receiver };
     }
 
     pub async fn wait_for_terminate(mut self) {
-        self.signalling_queue.send(());
+        // We do not care about the results here. If the queue are already closed, so be it.
+        let _ = self.signalling_queue.send(());
         self.terminate_queue.recv().await;
     }
 }
@@ -49,12 +82,75 @@ pub struct IccpSubsystemAssociationOperator {
 }
 
 impl IccpSubsystemAssociationOperator {
-    pub async fn initiate(operator: Arc<RwLock<Self>>) {
+    async fn initialise(operator: Arc<RwLock<Self>>) -> Result<(), anyhow::Error> {
         match operator.write().await.signalling_queue.try_recv() {
-            Ok(_) => return,
+            Ok(_) => return Ok(()),
             Err(TryRecvError::Empty) => (),
-            Err(TryRecvError::Disconnected) => return,
+            Err(TryRecvError::Disconnected) => return Ok(()),
         }
+
+        let association_lock = operator.read().await.association.clone();
+        let association = association_lock.read().await;
+        let host = match format!("{}:{}", association.host, association.port).parse() {
+            Ok(host) => host,
+            // TODO Indicate failure and retry.
+            Err(_) => return Ok(()),
+        };
+
+        match operator.read().await.association.read().await.association_type {
+            ClientUnidirectional | ClientBidirectional => {
+                create_mms_service_client(
+                    host,
+                    MmsServiceConnectionParameters {
+                        local_detail_calling: Some(4 * 1024 * 1024), // 4MB Payload Size. TODO Move to configuration
+
+                        called: MmsServiceConnectionIdentityParameters {
+                            tsap_id: Some(association.local_data_center_parameters.tsap.clone()),
+                            session_selector: Some(association.local_data_center_parameters.ssap.clone()),
+                            presentation_selector: Some(association.local_data_center_parameters.psap.clone()),
+
+                            ap_title: Some(convert_object_identifiers(&association.local_data_center_parameters.ae_title.ap_title).unwrap()),
+                            ae_qualifier: Some(association.local_data_center_parameters.ae_title.ae_qualifier.to_signed_bytes_be()),
+                            ap_invocation_identifier: None,
+                            ae_invocation_identifier: None,
+                        },
+                        calling: MmsServiceConnectionIdentityParameters {
+                            tsap_id: Some(association.remote_data_center_parameters.tsap.clone()),
+                            session_selector: Some(association.remote_data_center_parameters.ssap.clone()),
+                            presentation_selector: Some(association.remote_data_center_parameters.psap.clone()),
+
+                            ap_title: Some(convert_object_identifiers(&association.remote_data_center_parameters.ae_title.ap_title).unwrap()),
+                            ae_qualifier: Some(association.remote_data_center_parameters.ae_title.ae_qualifier.to_signed_bytes_be()),
+                            ap_invocation_identifier: None,
+                            ae_invocation_identifier: None,
+                        },
+
+                        proposed_max_serv_outstanding_calling: 1000,
+                        proposed_max_serv_outstanding_called: 1000,
+                        proposed_data_structure_nesting_level: Some(2),
+                        propsed_parameter_cbb: vec![Str1, Str2, Vnam, Vlis],
+                        services_supported_calling: vec![
+                            GetNameList,
+                            Identify,
+                            Read,
+                            Write,
+                            GetVariableAccessAttributes,
+                            DefineNamedVariableList,
+                            GetNamedVariableListAttribute,
+                            DeleteNamedVariableList,
+                            InformationReport,
+                            Conclude,
+                        ],
+                    },
+                )
+                .await
+            }
+            api::IccpAssociationType::ServerUnidirectional => todo!(),
+            api::IccpAssociationType::ServerBidirectional => todo!(),
+        }
+        .unwrap();
+
+        Ok(())
 
         // RustyIccpClient::new(mms_client)
     }
