@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::iccp::converter::deserialise_ae_title;
 
 use crate::iccp::api::{IccpAeTitle, IccpAssociation};
 
@@ -29,6 +30,7 @@ pub struct IccpDataPointSpecification {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpDataCenterSetSpecification {
+    #[serde(deserialize_with = "deserialise_ae_title")]
     pub ae_title: IccpAeTitle,
 
     #[serde(with = "hex")]

@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use num_bigint::BigInt;
 use rand::random_range;
 use rusty_mms::parameters::{
     ParameterSupportOption::{Str1, Str2, Vlis, Vnam},
@@ -96,6 +97,7 @@ impl IccpSubsystemAssociationOperator {
             // TODO Indicate failure and retry.
             Err(_) => return Ok(()),
         };
+        println!("{}", &association.local_data_center_parameters.ae_title.ae_qualifier);
 
         match operator.read().await.association.read().await.association_type {
             ClientUnidirectional | ClientBidirectional => {
@@ -110,7 +112,7 @@ impl IccpSubsystemAssociationOperator {
                             presentation_selector: Some(association.local_data_center_parameters.psap.clone()),
 
                             ap_title: Some(convert_object_identifiers(&association.local_data_center_parameters.ae_title.ap_title).unwrap()),
-                            ae_qualifier: Some(association.local_data_center_parameters.ae_title.ae_qualifier.to_signed_bytes_be()),
+                            ae_qualifier: Some(vec![0]),
                             ap_invocation_identifier: None,
                             ae_invocation_identifier: None,
                         },
@@ -120,7 +122,7 @@ impl IccpSubsystemAssociationOperator {
                             presentation_selector: Some(association.remote_data_center_parameters.psap.clone()),
 
                             ap_title: Some(convert_object_identifiers(&association.remote_data_center_parameters.ae_title.ap_title).unwrap()),
-                            ae_qualifier: Some(association.remote_data_center_parameters.ae_title.ae_qualifier.to_signed_bytes_be()),
+                            ae_qualifier: Some(vec![0]),
                             ap_invocation_identifier: None,
                             ae_invocation_identifier: None,
                         },

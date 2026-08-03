@@ -1,9 +1,10 @@
-use crate::iccp::converter::deserialise_bigint;
+use crate::iccp::converter::deserialise_ae_title;
 use crate::iccp::converter::serialise_bigint;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
 use serde::{Deserialize, Serialize};
+use serde_json::Number;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum IccpDataPointName {
@@ -54,18 +55,19 @@ pub enum IccpAssociationType {
     ServerBidirectional,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpAeTitle {
     pub ap_title: ObjectIdentifier,
 
-    #[serde(serialize_with = "serialise_bigint", deserialize_with = "deserialise_bigint")]
+    #[serde(serialize_with = "serialise_bigint")]
     pub ae_qualifier: BigInt,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpDataCenterParameters {
+    #[serde(deserialize_with = "deserialise_ae_title")]
     pub ae_title: IccpAeTitle,
 
     #[serde(with = "hex")]

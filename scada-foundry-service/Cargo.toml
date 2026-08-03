@@ -29,7 +29,7 @@ clap = { version = "4.6.1", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["full"] }
 bigdecimal = { version = "0.4", features = [ "serde-json" ] }
 axum-extra = { version = "0.12.6", features = ["typed-header"] }
-serde_json = { version = "1.0.149", features = ["arbitrary_precision", "raw_value"] }
+serde_json = { version = "1.0.149", features = ["arbitrary_precision"] }
 futures = "0.3.32"
 rand = "0.10.1"
 

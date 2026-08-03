@@ -47,7 +47,7 @@ impl ApplicationConfiguration {
     }
 
     async fn _try_save(&self, filename: &str) -> Result<(), std::io::Error> {
-        let json_data = serde_json::to_string(self)?;
+        let json_data = serde_json::to_string_pretty(self)?;
         let mut file = File::create(filename).await?;
         file.write_all(&json_data.as_bytes()).await?;
 

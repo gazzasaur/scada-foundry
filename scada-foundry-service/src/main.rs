@@ -20,8 +20,6 @@ use axum::{
 };
 use axum_extra::{TypedHeader, headers};
 use clap::Parser;
-use num_bigint::BigInt;
-use oid::ObjectIdentifier;
 use serde::{Deserialize, Serialize};
 use tokio::{join, sync::mpsc::unbounded_channel};
 use tower_http::{
@@ -33,7 +31,7 @@ use crate::{
     config::ApplicationConfiguration,
     iccp::{
         IccpSubsystem,
-        api::{IccpAeTitle, IccpAssociation, IccpAssociationType, IccpDataCenterParameters},
+        api::IccpAssociation ,
     },
 };
 
@@ -51,32 +49,7 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let mut app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
-    // let mut app_config = ApplicationConfiguration::new().await;
-
-    app_config.iccp.associations.push(IccpAssociation {
-        id: "my-id".into(),
-        name: "my-name".into(),
-        association_type: IccpAssociationType::ClientUnidirectional,
-        domain: "my-domain".into(),
-        bilateral_table: "my-table".into(),
-        host: "127.0.0.1".into(),
-        port: 102,
-        local_data_center_parameters: IccpDataCenterParameters {
-            ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(10000000) },
-            tsap: vec![0],
-            ssap: vec![0],
-            psap: vec![0],
-        },
-        remote_data_center_parameters: IccpDataCenterParameters {
-            ae_title: IccpAeTitle { ap_title: ObjectIdentifier::try_from("1.2.3.4").map_err(|e| anyhow::anyhow!("{e:?}"))?, ae_qualifier: BigInt::from(0) },
-            tsap: vec![0],
-            ssap: vec![0],
-            psap: vec![0],
-        },
-    });
-
-    app_config.save(args.config_file.as_str()).await?;
+    let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
 
     let (global_listener_sender, _global_listener_receiver) = unbounded_channel();
 
@@ -106,72 +79,6 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-// async fn boo(a: IccpManager) {
-//     a.initiator_iccp_association(InitiatorIccpAssociation {
-//         uuid: Uuid::new_v4().into(),
-//         name: "EGX_TO_GAZ".into(),
-//         role: config::iccp::InitiatorRole::Client,
-//         authentication: InitiatorAuthenticationScheme::None,
-//         local_control_center: IccpInitiatorControlCenterInformation {
-//             tsap_address: vec![1],
-//             ssap_address: vec![1],
-//             psap_address: vec![1],
-//             ae_title: AeTitle { ap_title: ObjectIdentifier::try_from("0.1.2.3.1").map_err(|e| anyhow::anyhow!("{:?}", e)).expect(""), ae_qualifier: 1.into() },
-//         },
-//         remote_control_center: IccpResponderControlCenterInformation {
-//             host: "127.0.0.1".into(),
-//             port: 8102,
-//             tsap_address: vec![2],
-//             ssap_address: vec![2],
-//             psap_address: vec![2],
-//             ae_title: AeTitle { ap_title: ObjectIdentifier::try_from("0.1.2.3.2").map_err(|e| anyhow::anyhow!("{:?}", e)).expect(""), ae_qualifier: 1.into() },
-//         },
-//         data_sets: vec![IccpDataSet {
-//             domain: "MyHouse".into(),
-//             name: "MyDataSet".into(),
-//             points: vec![IccpDataPoint { uuid: Uuid::new_v4().into(), name: IccpPointName::Icc("MyDataSet".into(), "MyPoint".into()), data_type: IccpPointDataType::State }],
-//         }],
-//     })
-//     .await
-//     .expect("");
-// }
-
-// async fn yeah(a: IccpManager) {
-//     let b = a
-//         .responder_iccp_association(ResponderIccpAssociation {
-//             uuid: Uuid::new_v4().into(),
-//             name: "EGX_TO_GAZ".into(),
-//             role: config::iccp::ResponderRole::Server,
-//             authentication: config::iccp::ResponderAuthenticationScheme::None,
-//             local_matcher: config::iccp::LocalIccpControlCenterMatcher::Masqurade,
-//             remote_matcher: RemoteIccpControlCenterMatcher::Relaxed {
-//                 tsap_address: SapAddressMatcher::Any,
-//                 ssap_address: SapAddressMatcher::Any,
-//                 psap_address: SapAddressMatcher::Any,
-//                 ae_title: AeTitleMatcher::ApTitleOnly(ObjectIdentifier::try_from(String::from("1.2.3.4")).expect("")),
-//             },
-//             points: vec![],
-//         })
-//         .await
-//         .expect("");
-// }
-
-// async fn create_iccp_association(Json(payload): Json<CreateIccpAssociation>) -> (StatusCode, Json<String>) {
-
-// }
-
-// #[derive(Clone, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// struct IccpAssociation {
-//     id: String,
-//     name: String,
-//     association_type: String,
-//     host: String,
-//     port: u16,
-//     local_data_center_parameters: DataCenterParameters,
-//     remote_data_center_parameters: DataCenterParameters,
-// }
-
 async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {
     (StatusCode::CREATED, Json(payload))
 }
@@ -186,159 +93,6 @@ struct User {
     id: u64,
     username: String,
 }
-
-// async fn ws_handler(
-//     ws: WebSocketUpgrade,
-//     user_agent: Option<TypedHeader<headers::UserAgent>>,
-//     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-// ) -> impl IntoResponse {
-//     println!("HELLO");
-//     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-//         user_agent.to_string()
-//     } else {
-//         String::from("Unknown browser")
-//     };
-//     println!("`{user_agent}` at {addr:?} connected.");
-//     // finalize the upgrade process by returning upgrade callback.
-//     // we can customize the callback by sending additional info such as address.
-//     ws.on_upgrade(move |socket| handle_socket(socket, addr))
-// }
-
-// async fn ws_handler(
-//     ws: WebSocketUpgrade,
-//     user_agent: Option<TypedHeader<headers::UserAgent>>,
-//     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-// ) -> impl IntoResponse {
-//     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
-//         user_agent.to_string()
-//     } else {
-//         String::from("Unknown browser")
-//     };
-//     println!("`{user_agent}` at {addr} connected.");
-//     // finalize the upgrade process by returning upgrade callback.
-//     // we can customize the callback by sending additional info such as address.
-//     ws.on_upgrade(move |socket| handle_socket(socket, addr))
-// }
-
-/// Actual websocket statemachine (one will be spawned per connection)
-// async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
-//     // send a ping (unsupported by some browsers) just to kick things off and get a response
-//     if socket
-//         .send(Message::Ping(Bytes::from_static(&[1, 2, 3])))
-//         .await
-//         .is_ok()
-//     {
-//         println!("Pinged {who:?}...");
-//     } else {
-//         println!("Could not send ping {who:?}!");
-//         // no Error here since the only thing we can do is to close the connection.
-//         // If we can not send messages, there is no way to salvage the statemachine anyway.
-//         return;
-//     }
-
-//     // receive single message from a client (we can either receive or send with socket).
-//     // this will likely be the Pong for our Ping or a hello message from client.
-//     // waiting for message from a client will block this task, but will not block other client's
-//     // connections.
-//     if let Some(msg) = socket.recv().await {
-//         if let Ok(msg) = msg {
-//             // if process_message(msg, who).is_break() {
-//             //     return;
-//             // }
-//         } else {
-//             println!("client {who:?} abruptly disconnected");
-//             return;
-//         }
-//     }
-
-//     // Since each client gets individual statemachine, we can pause handling
-//     // when necessary to wait for some external event (in this case illustrated by sleeping).
-//     // Waiting for this client to finish getting its greetings does not prevent other clients from
-//     // connecting to server and receiving their greetings.
-//     for i in 1..5 {
-//         if socket
-//             .send(Message::Text(format!("Hi {i} times!").into()))
-//             .await
-//             .is_err()
-//         {
-//             println!("client {who:?} abruptly disconnected");
-//             return;
-//         }
-//         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-//     }
-
-//     // By splitting socket we can send and receive at the same time. In this example we will send
-//     // unsolicited messages to client based on some sort of server's internal event (i.e .timer).
-//     let (mut sender, mut receiver) = socket.split();
-
-//     // Spawn a task that will push several messages to the client (does not matter what client does)
-//     let whoc = who.clone();
-//     let mut send_task = tokio::spawn(async move {
-//         let n_msg = 20;
-//         for i in 0..n_msg {
-//             // In case of any websocket error, we exit.
-//             if sender
-//                 .send(Message::Text(format!("Server message {i} ...").into()))
-//                 .await
-//                 .is_err()
-//             {
-//                 return i;
-//             }
-
-//             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-//         }
-
-//         println!("Sending close to {whoc:?}...");
-//         if let Err(e) = sender
-//             .send(Message::Close(Some(CloseFrame {
-//                 code: axum::extract::ws::close_code::NORMAL,
-//                 reason: Utf8Bytes::from_static("Goodbye"),
-//             })))
-//             .await
-//         {
-//             println!("Could not send Close due to {e}, probably it is ok?");
-//         }
-//         n_msg
-//     });
-
-//     // This second task will receive messages from client and print them on server console
-//     let mut recv_task = tokio::spawn(async move {
-//         let mut cnt = 0;
-//         while let Some(Ok(msg)) = receiver.next().await {
-//             cnt += 1;
-//             // print message and break if instructed to do so
-//             // if process_message(msg, who).is_break() {
-//             //     break;
-//             // }
-//         }
-//         cnt
-//     });
-
-//     // If any one of the tasks exit, abort the other.
-//     tokio::select! {
-//         rv_a = (&mut send_task) => {
-//             match rv_a {
-//                 Ok(a) => println!("{a} messages sent to {who:?}"),
-//                 Err(a) => println!("Error sending messages {a:?}")
-//             }
-//             recv_task.abort();
-//         },
-//         rv_b = (&mut recv_task) => {
-//             match rv_b {
-//                 Ok(b) => println!("Received {b} messages"),
-//                 Err(b) => println!("Error receiving messages {b:?}")
-//             }
-//             send_task.abort();
-//         }
-//     }
-
-//     // returning from the handler closes the websocket connection
-//     println!("Websocket context {who:?} destroyed");
-// }
-
-//     ws: WebSocketUpgrade,
-//     user_agent: Option<TypedHeader<headers::UserAgent>>,
-//     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 
 async fn ws_handler(ws: WebSocketUpgrade, user_agent: Option<TypedHeader<headers::UserAgent>>, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
     // Finalize the upgrade handshake

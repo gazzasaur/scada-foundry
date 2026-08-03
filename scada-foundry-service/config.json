@@ -1,1 +1,33 @@
-{"iccp":{"associations":[{"id":"my-id","name":"my-name","associationType":"clientUnidirectional","domain":"my-domain","bilateralTable":"my-table","host":"127.0.0.1","port":102,"localDataCenterParameters":{"aeTitle":{"apTitle":"1.2.3.4","aeQualifier":10000000},"tsap":"00","ssap":"00","psap":"00"},"remoteDataCenterParameters":{"aeTitle":{"apTitle":"1.2.3.4","aeQualifier":0},"tsap":"00","ssap":"00","psap":"00"}}]}}
+{
+  "iccp": {
+    "associations": [
+      {
+        "id": "my-id",
+        "name": "my-name",
+        "associationType": "clientUnidirectional",
+        "domain": "my-domain",
+        "bilateralTable": "my-table",
+        "host": "127.0.0.1",
+        "port": 102,
+        "localDataCenterParameters": {
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1000000000000000000000000000000000000000000000000000000000000000000000000000000000
+          },
+          "tsap": "00",
+          "ssap": "00",
+          "psap": "00"
+        },
+        "remoteDataCenterParameters": {
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 0
+          },
+          "tsap": "00",
+          "ssap": "00",
+          "psap": "00"
+        }
+      }
+    ]
+  }
+}
