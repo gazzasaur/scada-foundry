@@ -20,6 +20,7 @@ use axum::{
 };
 use axum_extra::{TypedHeader, headers};
 use clap::Parser;
+use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
 use tokio::{join, sync::mpsc::unbounded_channel};
 use tower_http::{
@@ -31,7 +32,7 @@ use crate::{
     config::ApplicationConfiguration,
     iccp::{
         IccpSubsystem,
-        api::IccpAssociation ,
+        api::{IccpAeTitle, IccpAssociation, IccpDataCenterParameters},
     },
 };
 
@@ -62,6 +63,7 @@ async fn main() -> Result<(), Error> {
     let cors = CorsLayer::permissive();
     let app = Router::new()
         .route("/", get(root))
+        .route("/app/api/fetchiccpassociations", get(fetch_iccp_associations))
         .route("/app/api/createiccpassociation", post(create_user))
         .route("/app/ws", any(ws_handler))
         .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)))
@@ -77,6 +79,36 @@ async fn main() -> Result<(), Error> {
 
 async fn root() -> &'static str {
     "Hello, World!"
+}
+
+async fn fetch_iccp_associations() -> (StatusCode, Json<Vec<IccpAssociation>>) {
+    (
+        StatusCode::OK,
+        Json(vec![
+            IccpAssociation {
+                id: "if".into(),
+                name: "name".into(),
+                association_type: iccp::api::IccpAssociationType::ClientBidirectional,
+                domain: "".into(),
+                bilateral_table: "".into(),
+                host: "".into(),
+                port: 1,
+                local_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
+                remote_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
+            },
+            IccpAssociation {
+                id: "if".into(),
+                name: "name".into(),
+                association_type: iccp::api::IccpAssociationType::ClientBidirectional,
+                domain: "".into(),
+                bilateral_table: "".into(),
+                host: "".into(),
+                port: 1,
+                local_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
+                remote_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
+            },
+        ]),
+    )
 }
 
 async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {

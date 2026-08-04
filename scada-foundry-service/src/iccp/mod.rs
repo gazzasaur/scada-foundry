@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use num_bigint::BigInt;
 use rand::random_range;
 use rusty_mms::parameters::{
     ParameterSupportOption::{Str1, Str2, Vlis, Vnam},

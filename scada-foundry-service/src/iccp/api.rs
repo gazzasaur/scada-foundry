@@ -4,7 +4,6 @@ use num_bigint::BigInt;
 use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
 use serde::{Deserialize, Serialize};
-use serde_json::Number;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum IccpDataPointName {

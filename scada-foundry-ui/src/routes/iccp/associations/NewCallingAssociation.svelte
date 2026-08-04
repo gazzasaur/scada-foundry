@@ -23,7 +23,7 @@
 	};
 
 	const loadDataCenters = async () => {
-
+		await getApplicationContext().getScadaForgeRequestService().fetchDataCenters();
 	};
 
 	let { open = $bindable(false) } = $props();
@@ -41,10 +41,6 @@
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Type</Label>
 			<Input type="text" value={association.associationType} disabled />
-		</div>
-		<div>
-			<Label class="text-heading mb-2.5 block text-sm font-medium">Virtual Control Center</Label>
-			<Select bind:value={association.associationDataCenter} placeholder="Virtual Control Center" required />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
