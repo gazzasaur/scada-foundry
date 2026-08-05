@@ -6,7 +6,7 @@
 		return {
 			associationName: '',
 			associationDataCenter: '',
-			associationType: 'Client',
+			associationType: 'clientUnidirectional',
 			associationHost: '',
 			associationPort: 102,
 			associationLocalApTitle: '',
@@ -20,10 +20,6 @@
 			associationLocalPsap: '',
 			associationRemotePsap: ''
 		};
-	};
-
-	const loadDataCenters = async () => {
-		await getApplicationContext().getScadaForgeRequestService().fetchDataCenters();
 	};
 
 	let { open = $bindable(false) } = $props();
@@ -42,7 +38,7 @@
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Type</Label>
 			<Input type="text" value={association.associationType} disabled />
 		</div>
-		<div>
+		<div class="col-span-2">
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
 			<Input type="text" value="None" disabled />
 		</div>

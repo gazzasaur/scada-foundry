@@ -74,6 +74,7 @@ impl IccpSubsystemAssociationState {
     }
 }
 
+// TODO This association should probably be a clone so we can reduce locking inside a critical task.
 pub struct IccpSubsystemAssociationOperator {
     pub association: Arc<RwLock<IccpAssociation>>,
     pub signalling_queue: UnboundedReceiver<()>,
@@ -177,11 +178,11 @@ impl IccpSubsystem {
         Self { listener, associations: HashMap::new() }
     }
 
-    pub async fn list_associations(&self) -> Vec<String> {
+    pub async fn list_associations(&self) -> Vec<IccpAssociation> {
         futures::future::join_all(self.associations.values().map(|assoc| async {
             // Clone here so we do not have to hold a lock while grabbing another lock. The risk of deadlock is too high.
             let association = assoc.read().await.association.clone();
-            association.read().await.id.clone()
+            association.read().await.clone()
         }))
         .await
         .into_iter()

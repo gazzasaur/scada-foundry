@@ -51,33 +51,35 @@
 				</TableHead>
 				<TableBody>
 					{#each associations as association}
-						<TableBodyRow>
-							<TableBodyCell>{association.name}</TableBodyCell>
-							<TableBodyCell>{association.associationType}</TableBodyCell>
-							<TableBodyCell>{association.bilateralTable}</TableBodyCell>
-							<TableBodyCell>{association.host}</TableBodyCell>
-							<TableBodyCell>{association.port}</TableBodyCell>
-							<TableBodyCell
-								><div>{association.localDataCenterParameters.aeTitle.apTitle}</div>
-								<div>{association.remoteDataCenterParameters.aeTitle.apTitle}</div></TableBodyCell
-							>
-							<TableBodyCell
-								><div>{association.localDataCenterParameters.aeTitle.aeQualifier}</div>
-								<div>{association.remoteDataCenterParameters.aeTitle.aeQualifier}</div></TableBodyCell
-							>
-							<TableBodyCell
-								><div>{association.localDataCenterParameters.tsap}</div>
-								<div>{association.remoteDataCenterParameters.tsap}</div></TableBodyCell
-							>
-							<TableBodyCell
-								><div>{association.localDataCenterParameters.ssap}</div>
-								<div>{association.remoteDataCenterParameters.ssap}</div></TableBodyCell
-							>
-							<TableBodyCell
-								><div>{association.localDataCenterParameters.psap}</div>
-								<div>{association.remoteDataCenterParameters.psap}</div></TableBodyCell
-							>
-						</TableBodyRow>
+						{#if ['clientUnidirectional', 'clientBidirectional'].includes(association.associationType)}
+							<TableBodyRow>
+								<TableBodyCell>{association.name}</TableBodyCell>
+								<TableBodyCell>{association.associationType}</TableBodyCell>
+								<TableBodyCell>{association.bilateralTable}</TableBodyCell>
+								<TableBodyCell>{association.host}</TableBodyCell>
+								<TableBodyCell>{association.port}</TableBodyCell>
+								<TableBodyCell
+									><div class="border-b-2">{association.localDataCenterParameters.aeTitle.apTitle}</div>
+									<div>{association.remoteDataCenterParameters.aeTitle.apTitle}</div></TableBodyCell
+								>
+								<TableBodyCell
+									><div class="border-b-2">{association.localDataCenterParameters.aeTitle.aeQualifier}</div>
+									<div>{association.remoteDataCenterParameters.aeTitle.aeQualifier}</div></TableBodyCell
+								>
+								<TableBodyCell
+									><div class="border-b-2">{association.localDataCenterParameters.tsap}</div>
+									<div>{association.remoteDataCenterParameters.tsap}</div></TableBodyCell
+								>
+								<TableBodyCell
+									><div class="border-b-2">{association.localDataCenterParameters.ssap}</div>
+									<div>{association.remoteDataCenterParameters.ssap}</div></TableBodyCell
+								>
+								<TableBodyCell
+									><div class="border-b-2">{association.localDataCenterParameters.psap}</div>
+									<div>{association.remoteDataCenterParameters.psap}</div></TableBodyCell
+								>
+							</TableBodyRow>
+						{/if}
 					{/each}
 				</TableBody>
 			</Table>
@@ -106,26 +108,7 @@
 					<TableHeadCell>Status</TableHeadCell>
 					<TableHeadCell>Controls</TableHeadCell>
 				</TableHead>
-				<TableBody>
-					<TableBodyRow>
-						<TableBodyCell>Apple MacBook Pro 17"</TableBodyCell>
-						<TableBodyCell>Silver</TableBodyCell>
-						<TableBodyCell>Laptop</TableBodyCell>
-						<TableBodyCell>$2999</TableBodyCell>
-					</TableBodyRow>
-					<TableBodyRow>
-						<TableBodyCell>Microsoft Surface Pro</TableBodyCell>
-						<TableBodyCell>White</TableBodyCell>
-						<TableBodyCell>Laptop PC</TableBodyCell>
-						<TableBodyCell>$1999</TableBodyCell>
-					</TableBodyRow>
-					<TableBodyRow>
-						<TableBodyCell>Magic Mouse 2</TableBodyCell>
-						<TableBodyCell>Black</TableBodyCell>
-						<TableBodyCell>Accessories</TableBodyCell>
-						<TableBodyCell>$99</TableBodyCell>
-					</TableBodyRow>
-				</TableBody>
+				<TableBody></TableBody>
 			</Table>
 			<div class="pt-2 text-center">
 				<Spinner type="bars" color="blue" />

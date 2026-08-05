@@ -5,13 +5,13 @@ pub mod core;
 pub mod error;
 pub mod iccp;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Error;
 use axum::{
     Json, Router,
     extract::{
-        ConnectInfo,
+        ConnectInfo, State,
         ws::{WebSocket, WebSocketUpgrade},
     },
     http::StatusCode,
@@ -22,7 +22,10 @@ use axum_extra::{TypedHeader, headers};
 use clap::Parser;
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
-use tokio::{join, sync::mpsc::unbounded_channel};
+use tokio::{
+    join,
+    sync::{Mutex, RwLock, mpsc::unbounded_channel},
+};
 use tower_http::{
     cors::CorsLayer,
     trace::{DefaultMakeSpan, TraceLayer},
@@ -54,10 +57,10 @@ async fn main() -> Result<(), Error> {
 
     let (global_listener_sender, _global_listener_receiver) = unbounded_channel();
 
-    let mut iccp_manager = IccpSubsystem::new(global_listener_sender).await;
+    let mut iccp_manager = Arc::new(RwLock::new(IccpSubsystem::new(global_listener_sender).await));
 
     for iccp_association in app_config.iccp.associations {
-        iccp_manager.create_association(iccp_association).await?;
+        iccp_manager.write().await.create_association(iccp_association).await?;
     }
 
     let cors = CorsLayer::permissive();
@@ -66,6 +69,7 @@ async fn main() -> Result<(), Error> {
         .route("/app/api/fetchiccpassociations", get(fetch_iccp_associations))
         .route("/app/api/createiccpassociation", post(create_user))
         .route("/app/ws", any(ws_handler))
+        .with_state(iccp_manager)
         .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)))
         .layer(cors);
 
@@ -81,34 +85,8 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-async fn fetch_iccp_associations() -> (StatusCode, Json<Vec<IccpAssociation>>) {
-    (
-        StatusCode::OK,
-        Json(vec![
-            IccpAssociation {
-                id: "if".into(),
-                name: "name".into(),
-                association_type: iccp::api::IccpAssociationType::ClientBidirectional,
-                domain: "".into(),
-                bilateral_table: "".into(),
-                host: "".into(),
-                port: 1,
-                local_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
-                remote_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
-            },
-            IccpAssociation {
-                id: "if".into(),
-                name: "name".into(),
-                association_type: iccp::api::IccpAssociationType::ClientBidirectional,
-                domain: "".into(),
-                bilateral_table: "".into(),
-                host: "".into(),
-                port: 1,
-                local_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
-                remote_data_center_parameters: IccpDataCenterParameters { ae_title: IccpAeTitle { ap_title: "1.2.3.4".try_into().unwrap(), ae_qualifier: BigInt::from(1) }, tsap: vec![1], ssap: vec![1], psap: vec![1] },
-            },
-        ]),
-    )
+async fn fetch_iccp_associations(State(iccp_subsystem): State<Arc<RwLock<IccpSubsystem>>>) -> (StatusCode, Json<Vec<IccpAssociation>>) {
+    (StatusCode::OK, Json(iccp_subsystem.read().await.list_associations().await))
 }
 
 async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {

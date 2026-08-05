@@ -15,7 +15,7 @@ export interface IccpDataCenterParameters {
 export interface IccpAssociation {
     id: string,
     name: string,
-    associationType: 'clientBidirectional',
+    associationType: 'clientUnidirectional' | 'clientBidirectional',
     domain: string,
     bilateralTable: string,
     host: string,
