@@ -6,8 +6,10 @@
 	import NewCallingAssociation from './NewCallingAssociation.svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
 	import type { IccpAssociation } from '$lib/services/ScadaForgeRequestService';
+	import NewCalledAssociation from './NewCalledAssociation.svelte';
 
-	let newTaseInitiator = $state(false);
+	let newTaseCalled = $state(false);
+	let newTaseCalling = $state(false);
 	let applicationContext = getApplicationContext();
 
 	let loading = $state(true);
@@ -32,7 +34,7 @@
 		<TabItem open title="Calling">
 			<div class="mb-2 flex justify-between">
 				<Heading tag="h3">Calling Associations</Heading>
-				<Button color="blue" onclick={() => (newTaseInitiator = true)}>Create</Button>
+				<Button color="blue" onclick={() => (newTaseCalling = true)}>Create</Button>
 			</div>
 			<Table>
 				<TableHead>
@@ -92,7 +94,7 @@
 		<TabItem title="Called">
 			<div class="mb-2 flex justify-between">
 				<Heading tag="h3">Called Associations</Heading>
-				<Button color="blue" onclick={() => (newTaseInitiator = true)}>Create</Button>
+				<Button color="blue" onclick={() => (newTaseCalled = true)}>Create</Button>
 			</div>
 			<Table>
 				<TableHead>
@@ -118,4 +120,5 @@
 	</Tabs>
 </div>
 
-<NewCallingAssociation bind:open={newTaseInitiator} />
+<NewCallingAssociation bind:open={newTaseCalling} />
+<NewCalledAssociation bind:open={newTaseCalled} />

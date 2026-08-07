@@ -5,10 +5,10 @@
 	const createBlankEntry = () => {
 		return {
 			associationName: '',
-			associationDataCenter: '',
 			associationDomain: '',
 			associationTable: '',
-			associationType: 'clientUnidirectional',
+			associationDataCenter: '',
+			associationType: 'serverUnidirectional',
 			associationHost: '',
 			associationPort: 102,
 			associationLocalApTitle: '',
@@ -30,7 +30,7 @@
 	let association = $state(createBlankEntry());
 </script>
 
-<Modal title="New TASE.2 Calling Association" form class="border" {open} outsideclose={false} onclose={() => (open = false)}>
+<Modal title="New TASE.2 Called Association" form class="border" {open} outsideclose={false} onclose={() => (open = false)}>
 	<div class="mb-6 grid gap-6 md:grid-cols-2">
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Name</Label>
@@ -39,6 +39,14 @@
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Type</Label>
 			<Input type="text" value={association.associationType} disabled />
+		</div>
+		<div>
+			<Label class="text-heading mb-2.5 block text-sm font-medium">Domain</Label>
+			<Input type="text" value={association.associationDomain} />
+		</div>
+		<div>
+			<Label class="text-heading mb-2.5 block text-sm font-medium">Bilateral Table</Label>
+			<Input type="text" value={association.associationTable} disabled />
 		</div>
 		<div class="col-span-2">
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
@@ -70,11 +78,11 @@
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Local AE Qualifier</Label>
-			<Input type="text" bind:value={association.associationLocalAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="[1-9a-zA-Z][0-9a-zA-Z]*" required />
+			<Input type="text" bind:value={association.associationLocalAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="([0-9a-zA-Z][0-9a-zA-Z])+" required />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote AE Qualifier</Label>
-			<Input type="text" bind:value={association.associationRemoteAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="[1-9a-zA-Z][0-9a-zA-Z]*" required />
+			<Input type="text" bind:value={association.associationRemoteAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="([0-9a-zA-Z][0-9a-zA-Z])+" required />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Local TSAP</Label>
@@ -125,8 +133,8 @@
 					},
 					{
 						aeTitle: {
-							apTitle: association.associationLocalApTitle,
-							aeQualifier: association.associationLocalAeQualifier,
+							apTitle: association.associationRemoteApTitle,
+							aeQualifier: association.associationRemoteAeQualifier,
 						},
 						tsap: association.associationRemoteTsap,
 						ssap: association.associationRemoteSsap,

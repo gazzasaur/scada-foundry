@@ -149,8 +149,7 @@ impl IccpSubsystemAssociationOperator {
             }
             api::IccpAssociationType::ServerUnidirectional => todo!(),
             api::IccpAssociationType::ServerBidirectional => todo!(),
-        }
-        .unwrap();
+        };
 
         Ok(())
 

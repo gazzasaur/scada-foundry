@@ -16,23 +16,29 @@ pub mod iccp;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApplicationConfiguration {
+    #[serde(default = "default_resource")]
+    pub filename: String,
     pub iccp: IccpConfiguration,
 }
 
+fn default_resource() -> String {
+    String::from("")
+}
+
 impl ApplicationConfiguration {
-    pub async fn new() -> Self {
-        Self { iccp: IccpConfiguration { associations: vec![] } }
+    pub async fn new(filename: &str) -> Self {
+        Self { filename: filename.into(), iccp: IccpConfiguration { associations: vec![] } }
     }
 
     pub async fn load(filename: &str) -> Result<ApplicationConfiguration, ScadaFoundryError> {
         let config_string: String = ApplicationConfiguration::_try_load_file(filename).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))?;
-        ApplicationConfiguration::_try_parse(config_string).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))
+        ApplicationConfiguration::_try_parse(config_string, filename.into()).await.map_err(to_app_error(format!("Failed to load application configuration: {filename}").as_str()))
     }
 
     pub async fn sync_iccp_subsystem(subsystem: IccpSubsystem) {}
 
-    pub async fn save(&self, filename: &str) -> Result<(), ScadaFoundryError> {
-        self._try_save(filename).await.map_err(to_app_error(format!("Failed to save application configuration: {filename}").as_str())).into()
+    pub async fn save(&self) -> Result<(), ScadaFoundryError> {
+        self._try_save(self.filename.as_str()).await.map_err(to_app_error(format!("Failed to save application configuration: {}", self.filename).as_str())).into()
     }
 
     async fn _try_load_file(filename: &str) -> Result<String, std::io::Error> {
@@ -42,8 +48,10 @@ impl ApplicationConfiguration {
         Ok(buffer)
     }
 
-    async fn _try_parse(config_string: String) -> Result<ApplicationConfiguration, Box<dyn Error>> {
-        Ok(tokio::task::spawn_blocking(move || serde_json::from_str::<ApplicationConfiguration>(config_string.as_str())).await??)
+    async fn _try_parse(config_string: String, f: String) -> Result<ApplicationConfiguration, Box<dyn Error>> {
+        let mut config = tokio::task::spawn_blocking(move || serde_json::from_str::<ApplicationConfiguration>(config_string.as_str())).await??;
+        config.filename = f;
+        Ok(config)
     }
 
     async fn _try_save(&self, filename: &str) -> Result<(), std::io::Error> {

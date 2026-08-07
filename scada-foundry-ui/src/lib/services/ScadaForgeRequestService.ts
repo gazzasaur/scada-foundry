@@ -1,8 +1,8 @@
-export type AssociationType = 'Client' | 'Server' | 'ClientBoth' | 'ServerBoth'
+export type AssociationType = 'clientUnidirectional' | 'clientBidirectional' | 'serverUnidirectional' | 'serverBidirectional'
 
 export interface IccpAeTitle {
     apTitle: string,
-    aeQualifier: number,
+    aeQualifier: string,
 }
 
 export interface IccpDataCenterParameters {
@@ -24,9 +24,13 @@ export interface IccpAssociation {
     remoteDataCenterParameters: IccpDataCenterParameters,
 }
 
-export interface DataCenterParameters {
+export interface AeTitle {
     apTitle: string,
     aeQualifier: string,
+}
+
+export interface DataCenterParameters {
+    aeTitle: AeTitle,
     tsap: string,
     ssap: string,
     psap: string,
@@ -40,10 +44,10 @@ export class ScadaForgeRequestService {
         return await (await fetch(`${this.url}/fetchiccpassociations`)).json() as Array<IccpAssociation>;
     }
 
-    public async createIccpAssociation(name: string, dataCenter: String, associationType: AssociationType, host: string, port: number, localDataCenterParameters: DataCenterParameters, remoteDataCenterParameters: DataCenterParameters) {
+    public async createIccpAssociation(id: string, name: string, dataCenter: String, associationType: AssociationType, host: string, port: number, localDataCenterParameters: DataCenterParameters, remoteDataCenterParameters: DataCenterParameters) {
         fetch(`${this.url}/createiccpassociation`, {
             method: 'POST', headers: { 'Content-type': 'application/json' }, body: JSON.stringify({
-                name, associationType, host, port, dataCenter, localDataCenterParameters, remoteDataCenterParameters
+                id, name, associationType, host, port, dataCenter, localDataCenterParameters, remoteDataCenterParameters
             })
         });
     }

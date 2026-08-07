@@ -7,7 +7,7 @@ use oid::ObjectIdentifier;
 use serde::{Deserializer, Serialize, Serializer, de::Visitor};
 use serde_json::value::RawValue;
 
-use crate::iccp::api::IccpAeTitle;
+use crate::{error::ScadaFoundryError, iccp::api::IccpAeTitle};
 
 pub fn convert_object_identifiers(object_identifier: &ObjectIdentifier) -> Result<Oid<'static>, anyhow::Error> {
     let ap_title_vec: Vec<u8> = object_identifier.into();
@@ -46,6 +46,11 @@ impl<'de> Visitor<'de> for AeTitleVisitor {
                 (Ok(Some((unknown_key, _))), _, _) => return Err(serde::de::Error::custom(format!("Unknown field on AE Title: {unknown_key}"))),
             }
         };
+
+        let mut ae_qualifier_string = ae_qualifier.to_string();
+        if ae_qualifier_string.contains("\"") {
+            ae_qualifier_string = serde_json::from_str::<String>(&ae_qualifier_string.as_str()).map_err(|e| serde::de::Error::custom(format!("{e:?}")))?;
+        }
 
         Ok(IccpAeTitle {
             ap_title: ObjectIdentifier::try_from(serde_json::from_str::<String>(&ap_title.to_string()).map_err(|e| serde::de::Error::custom(format!("Failed to parse ApTitle on Ae Title: {e:?}")))?)

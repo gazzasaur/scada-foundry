@@ -4,6 +4,7 @@ mod context;
 pub mod core;
 pub mod error;
 pub mod iccp;
+pub mod webservice;
 
 use std::{net::SocketAddr, sync::Arc};
 
@@ -32,11 +33,10 @@ use tower_http::{
 };
 
 use crate::{
-    config::ApplicationConfiguration,
-    iccp::{
+    config::ApplicationConfiguration, iccp::{
         IccpSubsystem,
         api::{IccpAeTitle, IccpAssociation, IccpDataCenterParameters},
-    },
+    }, webservice::WebServiceIccpAssociation,
 };
 
 /// SCADA Foundry Server
@@ -48,28 +48,39 @@ struct Args {
     config_file: String,
 }
 
+#[derive(Clone)]
+struct WebAppContect {
+    pub config: Arc<RwLock<ApplicationConfiguration>>,
+    pub iccp_subsystem: Arc<RwLock<IccpSubsystem>>,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
-    let app_config = ApplicationConfiguration::load(args.config_file.as_str()).await?;
+    let app_config = Arc::new(RwLock::new(ApplicationConfiguration::load(args.config_file.as_str()).await?));
 
     let (global_listener_sender, _global_listener_receiver) = unbounded_channel();
 
     let mut iccp_manager = Arc::new(RwLock::new(IccpSubsystem::new(global_listener_sender).await));
 
-    for iccp_association in app_config.iccp.associations {
+    for iccp_association in app_config.write().await.iccp.associations.iter().cloned() {
         iccp_manager.write().await.create_association(iccp_association).await?;
     }
+
+    let asdf = WebAppContect {
+        iccp_subsystem: iccp_manager.clone(),
+        config: app_config.clone(),
+    };
 
     let cors = CorsLayer::permissive();
     let app = Router::new()
         .route("/", get(root))
         .route("/app/api/fetchiccpassociations", get(fetch_iccp_associations))
-        .route("/app/api/createiccpassociation", post(create_user))
+        .route("/app/api/createiccpassociation", post(create_iccp_associations))
         .route("/app/ws", any(ws_handler))
-        .with_state(iccp_manager)
+        .with_state(asdf)
         .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)))
         .layer(cors);
 
@@ -85,12 +96,19 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-async fn fetch_iccp_associations(State(iccp_subsystem): State<Arc<RwLock<IccpSubsystem>>>) -> (StatusCode, Json<Vec<IccpAssociation>>) {
-    (StatusCode::OK, Json(iccp_subsystem.read().await.list_associations().await))
+async fn create_iccp_associations(State(state): State<WebAppContect>, Json(payload): Json<WebServiceIccpAssociation>) -> StatusCode {
+    let payload: IccpAssociation = payload.try_into().unwrap();
+    let mut config = state.config.write().await;
+    config.iccp.associations.push(payload.clone());
+    config.save().await;
+    drop(config);
+
+    state.iccp_subsystem.write().await.create_association(payload.clone()).await;
+    StatusCode::OK
 }
 
-async fn create_user(Json(payload): Json<IccpAssociation>) -> (StatusCode, Json<IccpAssociation>) {
-    (StatusCode::CREATED, Json(payload))
+async fn fetch_iccp_associations(State(iccp_subsystem): State<WebAppContect>) -> (StatusCode, Json<Vec<IccpAssociation>>) {
+    (StatusCode::OK, Json(iccp_subsystem.iccp_subsystem.read().await.list_associations().await))
 }
 
 #[derive(Deserialize)]
