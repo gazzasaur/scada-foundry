@@ -7,9 +7,8 @@
 			associationName: '',
 			associationDomain: '',
 			associationTable: '',
-			associationDataCenter: '',
 			associationType: 'serverUnidirectional',
-			associationHost: '',
+			associationHost: '0.0.0.0',
 			associationPort: 102,
 			associationLocalApTitle: '',
 			associationRemoteApTitle: '',
@@ -46,7 +45,7 @@
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Bilateral Table</Label>
-			<Input type="text" value={association.associationTable} disabled />
+			<Input type="text" value={association.associationTable} />
 		</div>
 		<div class="col-span-2">
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Authentication</Label>
@@ -54,7 +53,7 @@
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote Host</Label>
-			<Input type="text" bind:value={association.associationHost} placeholder="IP Address or Hostname" />
+			<Input type="text" bind:value={association.associationHost} placeholder="IP Address or Hostname" disabled />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote Port</Label>
@@ -78,11 +77,11 @@
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Local AE Qualifier</Label>
-			<Input type="text" bind:value={association.associationLocalAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="([0-9a-zA-Z][0-9a-zA-Z])+" required />
+			<Input type="text" bind:value={association.associationLocalAeQualifier} placeholder="Integer: 1234" pattern="[0-9]+" required />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Remote AE Qualifier</Label>
-			<Input type="text" bind:value={association.associationRemoteAeQualifier} placeholder="Hexadecimal Bytes: 0015ABCD" pattern="([0-9a-zA-Z][0-9a-zA-Z])+" required />
+			<Input type="text" bind:value={association.associationRemoteAeQualifier} placeholder="Integer: 1234" pattern="[0-9]+" required />
 		</div>
 		<div>
 			<Label class="text-heading mb-2.5 block text-sm font-medium">Local TSAP</Label>
@@ -115,32 +114,33 @@
 			type="submit"
 			color="blue"
 			onclick={async () => {
-				await context.getScadaForgeRequestService().createIccpAssociation(
-					'',
-					association.associationName,
-					association.associationDataCenter,
-					'serverUnidirectional',
-					association.associationHost,
-					association.associationPort,
-					{
+				await context.getScadaForgeRequestService().createIccpAssociation({
+					id: '',
+					name: association.associationName,
+					domain: association.associationDomain,
+					bilateralTable: association.associationTable,
+					associationType: 'serverUnidirectional',
+					host: association.associationHost,
+					port: association.associationPort,
+					localDataCenterParameters: {
 						aeTitle: {
 							apTitle: association.associationLocalApTitle,
-							aeQualifier: association.associationLocalAeQualifier,
+							aeQualifier: BigInt(association.associationLocalAeQualifier)
 						},
 						tsap: association.associationLocalTsap,
 						ssap: association.associationLocalSsap,
 						psap: association.associationLocalPsap
 					},
-					{
+					remoteDataCenterParameters: {
 						aeTitle: {
 							apTitle: association.associationRemoteApTitle,
-							aeQualifier: association.associationRemoteAeQualifier,
+							aeQualifier: BigInt(association.associationRemoteAeQualifier)
 						},
 						tsap: association.associationRemoteTsap,
 						ssap: association.associationRemoteSsap,
 						psap: association.associationRemotePsap
 					}
-				);
+				});
 				association = createBlankEntry();
 				open = false;
 			}}>Create</Button

@@ -1,8 +1,10 @@
+import type { IccpAssociationStateMessage } from "./ScadaForgeStreamService";
+
 export type AssociationType = 'clientUnidirectional' | 'clientBidirectional' | 'serverUnidirectional' | 'serverBidirectional'
 
 export interface IccpAeTitle {
     apTitle: string,
-    aeQualifier: string,
+    aeQualifier: BigInt,
 }
 
 export interface IccpDataCenterParameters {
@@ -15,7 +17,7 @@ export interface IccpDataCenterParameters {
 export interface IccpAssociation {
     id: string,
     name: string,
-    associationType: 'clientUnidirectional' | 'clientBidirectional',
+    associationType: AssociationType,
     domain: string,
     bilateralTable: string,
     host: string,
@@ -24,31 +26,34 @@ export interface IccpAssociation {
     remoteDataCenterParameters: IccpDataCenterParameters,
 }
 
-export interface AeTitle {
-    apTitle: string,
-    aeQualifier: string,
-}
-
-export interface DataCenterParameters {
-    aeTitle: AeTitle,
-    tsap: string,
-    ssap: string,
-    psap: string,
+export interface IccpAssociationState {
+    association: IccpAssociation,
+    status: 'Idle',
 }
 
 export class ScadaForgeRequestService {
     constructor(private url: string) {
     }
 
-    public async fetchIccpAssociations(): Promise<Array<IccpAssociation>> {
-        return await (await fetch(`${this.url}/fetchiccpassociations`)).json() as Array<IccpAssociation>;
+    public async fetchIccpAssociations(): Promise<Array<IccpAssociationState>> {
+        // @ts-expect-error TS does not seem to have the context 
+        return JSON.parse(await (await fetch(`${this.url}/fetchiccpassociations`)).text(), (key: string, value: any, context: any) => {
+            if (key === 'aeQualifier') {
+                return BigInt(context.source);
+            }
+            return value;
+        }) as Array<IccpAssociationState>;
     }
 
-    public async createIccpAssociation(id: string, name: string, dataCenter: String, associationType: AssociationType, host: string, port: number, localDataCenterParameters: DataCenterParameters, remoteDataCenterParameters: DataCenterParameters) {
-        fetch(`${this.url}/createiccpassociation`, {
-            method: 'POST', headers: { 'Content-type': 'application/json' }, body: JSON.stringify({
-                id, name, associationType, host, port, dataCenter, localDataCenterParameters, remoteDataCenterParameters
+    public async createIccpAssociation(association: IccpAssociation): Promise<String> {
+        return await (await fetch(`${this.url}/createiccpassociation`, {
+            method: 'POST', headers: { 'Content-type': 'application/json' }, body: JSON.stringify(association, (key: string, value: any) => {
+                if (key === 'aeQualifier') {
+                    // @ts-expect-error TS does not seem to have the context 
+                    return JSON.rawJSON(value.toString())
+                }
+                return value;
             })
-        });
+        })).text();
     }
 }

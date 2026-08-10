@@ -1,6 +1,7 @@
-use crate::iccp::api::{IccpAssociationStatus, IccpDataPointValue};
+use crate::iccp::api::{IccpAssociationState, IccpDataPointValue};
 
+#[derive(Clone, Debug)]
 pub enum ScadaFoundryEvent {
-    IccpAssociationUpdate(IccpAssociationStatus),
+    IccpAssociationUpdate(IccpAssociationState),
     IccpDataPointUpdate(IccpDataPointValue),
 }

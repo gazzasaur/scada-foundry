@@ -1,4 +1,5 @@
 {
+  "filename": "config.json",
   "iccp": {
     "associations": [
       {
@@ -8,11 +9,38 @@
         "domain": "my-domain",
         "bilateralTable": "my-table",
         "host": "127.0.0.1",
-        "port": 102,
+        "port": 8102,
         "localDataCenterParameters": {
           "aeTitle": {
             "apTitle": "1.2.3.4",
-            "aeQualifier": 1000000000000
+            "aeQualifier": 0
+          },
+          "tsap": "00",
+          "ssap": "00",
+          "psap": "00"
+        },
+        "remoteDataCenterParameters": {
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 0
+          },
+          "tsap": "00",
+          "ssap": "00",
+          "psap": "00"
+        }
+      },
+      {
+        "id": "8c318280-2206-4740-b8dc-e117961e7819",
+        "name": "asdffgd",
+        "associationType": "serverUnidirectional",
+        "domain": "my-domain",
+        "bilateralTable": "my-table",
+        "host": "0.0.0.0",
+        "port": 8102,
+        "localDataCenterParameters": {
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 0
           },
           "tsap": "00",
           "ssap": "00",

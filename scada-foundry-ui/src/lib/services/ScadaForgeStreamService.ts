@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import type { IccpAssociation, IccpAssociationState } from './ScadaForgeRequestService';
 
 export interface ScadaForgeStatus {
     kind: 'ScadaForgeStatus',
@@ -6,11 +7,16 @@ export interface ScadaForgeStatus {
     message: string,
 }
 
+export interface IccpAssociationStateMessage {
+    kind: 'IccpAssociationStateMessage',
+    data: IccpAssociationState,
+}
+
 export interface IccpDataPointUpdate {
     kind: 'IccpDataPointUpdate'
 }
 
-export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpDataPointUpdate;
+export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpAssociationStateMessage | IccpDataPointUpdate;
 
 export class ScadaForgeStreamService {
     private socket: WebSocket | undefined;
@@ -23,7 +29,6 @@ export class ScadaForgeStreamService {
     constructor(private url: string | undefined) {
         this.listeners = new Map<string, (message: ScadaForgeStreamServiceMessage) => void>();
         if (url) {
-            this.socket = new WebSocket(url);
             setTimeout(() => this.connectWebSocket(), 1000 + Math.ceil(1000 * Math.random()));
         } else {
             this.serviceConnectionStatus = { 'kind': 'ScadaForgeStatus', state: 'Failed', message: 'Cannot determine websocket url.' };
@@ -80,17 +85,17 @@ export class ScadaForgeStreamService {
         });
         this.socket.addEventListener('message', (event) => {
             let message = undefined;
-            let messageData = event.data;
-            if (Object.keys(messageData).includes('kind')) {
-                switch (messageData['kind']) {
-                    case 'ScadaForgeStatus':
-                        message = event.data as ScadaForgeStatus;
+            // @ts-expect-error TS does not seem to have the context 
+            let messageData = JSON.parse(event.data, (key: string, value: any, context: any) => {
+                if (key === 'aeQualifier') {
+                    return BigInt(context.source);
                 }
-            }
-            if (!message) {
+                return value;
+            });
+            if (!Object.keys(messageData).includes('kind')) {
                 return;
             }
-            this.announce(message);
+            this.announce(messageData);
         });
     }
 

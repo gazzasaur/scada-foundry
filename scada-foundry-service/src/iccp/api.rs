@@ -5,18 +5,19 @@ use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IccpDataPointName {
     Vcc(String),
     Icc(String, String),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IccpDataPointKey {
     association_id: String,
     point_name: IccpDataPointName,
 }
 
+#[derive(Clone, Debug)]
 pub struct IccpDataPointValue {
     pub association_id: String,
     pub name: Option<String>,
@@ -31,21 +32,7 @@ pub struct IccpDataPointValue {
     pub allow_write: bool,
 }
 
-pub enum IccpAssociationState {
-    Idle,
-    Failed,
-    Connected,
-}
-
-pub struct IccpAssociationStatus {
-    pub id: String,
-    pub name: String,
-    pub enabled: bool,
-    pub status_description: String,
-    pub state: IccpAssociationState,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum IccpAssociationType {
     ClientUnidirectional,
@@ -54,7 +41,7 @@ pub enum IccpAssociationType {
     ServerBidirectional,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpAeTitle {
     pub ap_title: ObjectIdentifier,
@@ -63,7 +50,7 @@ pub struct IccpAeTitle {
     pub ae_qualifier: BigInt,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpDataCenterParameters {
     #[serde(deserialize_with = "deserialise_ae_title")]
@@ -79,7 +66,7 @@ pub struct IccpDataCenterParameters {
     pub psap: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpAssociation {
     pub id: String,
@@ -93,4 +80,20 @@ pub struct IccpAssociation {
     pub port: u16,
     pub local_data_center_parameters: IccpDataCenterParameters,
     pub remote_data_center_parameters: IccpDataCenterParameters,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum IccpAssociationStatus {
+    Idle,
+    Failed,
+    Connected,
+    Connecting,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct IccpAssociationState {
+    pub association: IccpAssociation,
+    pub status: IccpAssociationStatus,
 }
