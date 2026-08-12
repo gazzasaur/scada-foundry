@@ -12,10 +12,6 @@ export interface IccpAssociationStateMessage {
     data: IccpAssociationState,
 }
 
-export interface IccpDataPointUpdate {
-    kind: 'IccpDataPointUpdate'
-}
-
 export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpAssociationStateMessage | IccpDataPointUpdate;
 
 export class ScadaForgeStreamService {

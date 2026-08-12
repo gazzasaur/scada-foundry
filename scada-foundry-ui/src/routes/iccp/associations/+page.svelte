@@ -18,6 +18,9 @@
 	let serverAssociations = $derived(associations.filter((state) => ['serverUnidirectional', 'serverBidirectional'].includes(state.association.associationType)));
 
 	let listenerId = '';
+	let itemsBacklog = [];
+
+	// TODO This may cause out of order updates. Need to process websocket events after fetch.
 	onMount(async () => {
 		listenerId = applicationContext.getScadaForgeStreamService().addListener((message) => {
 			if (message.kind != 'IccpAssociationStateMessage') {
@@ -66,6 +69,7 @@
 					<TableHeadCell>Table</TableHeadCell>
 					<TableHeadCell>Host</TableHeadCell>
 					<TableHeadCell>Port</TableHeadCell>
+					<TableHeadCell>Side</TableHeadCell>
 					<TableHeadCell>AP Title</TableHeadCell>
 					<TableHeadCell>AE Qualifier</TableHeadCell>
 					<TableHeadCell>TSAP</TableHeadCell>
@@ -83,6 +87,7 @@
 							<TableBodyCell rowspan={2}>{associationState.association.bilateralTable}</TableBodyCell>
 							<TableBodyCell rowspan={2}>{associationState.association.host}</TableBodyCell>
 							<TableBodyCell rowspan={2}>{associationState.association.port}</TableBodyCell>
+							<TableBodyCell>Local</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>
@@ -92,6 +97,7 @@
 							<TableBodyCell rowspan={2}></TableBodyCell>
 						</TableBodyRow>
 						<TableBodyRow>
+							<TableBodyCell>Remote</TableBodyCell>
 							<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 							<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>
@@ -125,6 +131,7 @@
 					<TableHeadCell>Table</TableHeadCell>
 					<TableHeadCell>Host</TableHeadCell>
 					<TableHeadCell>Port</TableHeadCell>
+					<TableHeadCell>Side</TableHeadCell>
 					<TableHeadCell>AP Title</TableHeadCell>
 					<TableHeadCell>AE Qualifier</TableHeadCell>
 					<TableHeadCell>TSAP</TableHeadCell>
@@ -142,6 +149,7 @@
 							<TableBodyCell rowspan={2}>{associationState.association.bilateralTable}</TableBodyCell>
 							<TableBodyCell rowspan={2}>{associationState.association.host}</TableBodyCell>
 							<TableBodyCell rowspan={2}>{associationState.association.port}</TableBodyCell>
+							<TableBodyCell>Local</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>
@@ -151,6 +159,7 @@
 							<TableBodyCell rowspan={2}></TableBodyCell>
 						</TableBodyRow>
 						<TableBodyRow>
+							<TableBodyCell>Remote</TableBodyCell>
 							<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 							<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
 							<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>

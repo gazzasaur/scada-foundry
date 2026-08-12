@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+rusty-mms = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-acse = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-copp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-cosp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-cotp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
-rusty-iccp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
-rusty-mms = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
-rusty-mms-service = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
 rusty-tpkt = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-mms-service = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*" }
+rusty-iccp = { git = "https://github.com/gazzasaur/rusty-iccp", version = "*", features = ["serde_camel_case"] }
 
 serde = { version = "1.0.228", features = ["derive"] }
 anyhow = "1.0.102"

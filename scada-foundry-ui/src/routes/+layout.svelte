@@ -105,10 +105,8 @@
 								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
 						{/snippet}
-						<SidebarItem label="Virtual Control Centers" class="mt-1 mb-1" href={resolve("/iccp/vccs")} />
 						<SidebarItem label="Associations" class="mt-1 mb-1" href={resolve("/iccp/associations")} />
-						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/scan" />
-						<SidebarItem label="Scan" class="mt-1 mb-1" href="/iccp/datasets" />
+						<SidebarItem label="Data Points" class="mt-1 mb-1" href={resolve("/iccp/datapoints")} />
 					</SidebarDropdownWrapper>
 					<SidebarDropdownWrapper label="DNP3" classes={{ btn: 'p-2' }} isOpen={matchesRoute}>
 						{#snippet icon()}
@@ -116,7 +114,7 @@
 								class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white"
 							/>
 						{/snippet}
-						<SidebarItem label="Coming Soon" class="mt-1 mb-1" href="/" />
+						<SidebarItem label="Coming Soon" class="mt-1 mb-1" href={resolve("/dnp3")} />
 					</SidebarDropdownWrapper>
 				</SidebarGroup>
 			</Sidebar>

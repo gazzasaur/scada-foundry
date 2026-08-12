@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::iccp::converter::deserialise_ae_title;
 use crate::iccp::converter::serialise_bigint;
 use num_bigint::BigInt;
@@ -5,7 +7,7 @@ use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IccpDataPointName {
     Vcc(String),
     Icc(String, String),
@@ -13,15 +15,15 @@ pub enum IccpDataPointName {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IccpDataPointKey {
-    association_id: String,
-    point_name: IccpDataPointName,
+    pub association_id: String,
+    pub point_name: IccpDataPointName,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct IccpDataPointValue {
     pub association_id: String,
-    pub name: Option<String>,
-    pub point_name: IccpDataPointKey,
+    pub data_point_name: IccpDataPointName,
+
     pub value: IccpData,
 
     pub source: String,         // The unique identifier of the source into this system
