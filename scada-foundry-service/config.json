@@ -192,6 +192,150 @@
           }
         },
         "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
+      },
+      {
+        "associationId": "123",
+        "dataPointName": {
+          "Vcc": "POO"
+        },
+        "dataPointType": {
+          "realQ": {
+            "initialValue": 12.0
+          }
+        },
+        "allowWrite": true
       }
     ],
     "transferSets": []

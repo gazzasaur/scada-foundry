@@ -9,11 +9,14 @@ use std::{
 
 use rand::{random, random_range};
 use rusty_iccp::{
-    IccpClient, IccpOperation::{self, MmsOperation}, IccpScopedIdentifier, IccpServer, RustyIccpClient, RustyIccpServer,
+    IccpClient,
+    IccpOperation::{self, MmsOperation},
+    IccpScopedIdentifier, IccpServer, RustyIccpClient, RustyIccpServer,
 };
 use rusty_mms::{
     ListOfVariablesItem, MmsBasicObjectClass, MmsObjectClass, MmsObjectName, MmsObjectScope,
     MmsTypeSpecification::TypeDescription,
+    MmsVariableAccessSpecification, VariableSpecification,
     parameters::{
         ParameterSupportOption::{Str1, Str2, Vlis, Vnam},
         ServiceSupportOption::{Conclude, DefineNamedVariableList, DeleteNamedVariableList, GetNameList, GetNamedVariableListAttribute, GetVariableAccessAttributes, Identify, InformationReport, Read, Write},
@@ -22,7 +25,7 @@ use rusty_mms::{
 use rusty_mms_service::{
     MmsServiceConnectionIdentityParameters, MmsServiceConnectionParameters, create_mms_service_client, create_mms_service_server,
     data::{
-        Identity, MmsServiceAccessResult,
+        Identity, MmsServiceAccessResult, MmsServiceData,
         MmsServiceTypeDescription::{self, Structure},
         MmsServiceTypeDescriptionComponent, MmsServiceTypeSpecification,
     },
@@ -347,15 +350,22 @@ impl IccpSubsystemAssociationOperator {
                         operation.respond().await;
                         continue;
                     }
-                    let items = operation.data_set_items().into_iter().map(|x| match x {
-                        IccpScopedIdentifier::Vcc(point_name) => IccpDataPointName::Vcc(point_name.clone()),
-                        IccpScopedIdentifier::Icc(point_domain, point_name) => IccpDataPointName::Icc(point_domain.clone(), point_name.clone()),
-                    }).collect();
+                    let items = operation
+                        .data_set_items()
+                        .into_iter()
+                        .map(|x| match x {
+                            IccpScopedIdentifier::Vcc(point_name) => IccpDataPointName::Vcc(point_name.clone()),
+                            IccpScopedIdentifier::Icc(point_domain, point_name) => IccpDataPointName::Icc(point_domain.clone(), point_name.clone()),
+                        })
+                        .collect();
                     match data_sets.entry((domain.clone(), name.clone())) {
                         // TODO Need to fail this. Although this should not be possible.
                         Occupied(occupied_entry) => occupied_entry,
                         Vacant(vacant_entry) => vacant_entry.insert_entry(items),
                     };
+                    operation.respond().await;
+                }
+                Ok(IccpOperation::StartTransferSet(operation)) => {
                     operation.respond().await;
                 }
                 // Ok(MmsServiceMessage::DefineNamedVariableList(msg)) => {

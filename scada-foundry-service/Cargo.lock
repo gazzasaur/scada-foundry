@@ -678,9 +678,9 @@ dependencies = [
 
 [[package]]
 name = "http-body-util"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9f41fd6a08e4d4ec69df65976da761afd5ad5e58a9d4acb46bd1c953a9e3ff2"
+checksum = "23169fe34a5fbcdd3f3862e78fb9b6fccd5f02a6dc6f732547005d45631ce71c"
 dependencies = [
  "bytes",
  "futures-core",
@@ -1161,7 +1161,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 [[package]]
 name = "rusty-acse"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "der-parser",
  "rand 0.9.5",
@@ -1177,7 +1177,7 @@ dependencies = [
 [[package]]
 name = "rusty-copp"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "der-parser",
  "rusty-cosp",
@@ -1192,7 +1192,7 @@ dependencies = [
 [[package]]
 name = "rusty-cosp"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "bitfield",
  "bytes",
@@ -1209,7 +1209,7 @@ dependencies = [
 [[package]]
 name = "rusty-cotp"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "bytes",
  "rand 0.9.5",
@@ -1222,11 +1222,12 @@ dependencies = [
 [[package]]
 name = "rusty-iccp"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "async-trait",
  "der-parser",
  "num-bigint",
+ "num-traits",
  "rand 0.9.5",
  "rusty-acse",
  "rusty-copp",
@@ -1243,7 +1244,7 @@ dependencies = [
 [[package]]
 name = "rusty-mms"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "der-parser",
  "num-traits",
@@ -1260,7 +1261,7 @@ dependencies = [
 [[package]]
 name = "rusty-mms-service"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1283,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "rusty-tpkt"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#4e752561a6ca56e680f682da34848a3e4d8e08e0"
+source = "git+https://github.com/gazzasaur/rusty-iccp#541afb89ff96314643d227b2f6e533dc2a072dd0"
 dependencies = [
  "bytes",
  "dyn-clone",
