@@ -33,7 +33,9 @@ export interface IccpAssociationState {
 
 export interface IccpDataPoint {
 	associationId: string;
-	dataPointName: { Vcc: string } | { Icc: [string, string] };
+	dataPointName: string;
+	dataPointDomain: string; // Can be blank
+	dataPointType: 'State' | 'RealQ' | 'DiscreteQ'; // Can be blank
 }
 
 export class ScadaForgeRequestService {

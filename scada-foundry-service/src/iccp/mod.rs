@@ -16,7 +16,7 @@ use rusty_iccp::{
 use rusty_mms::{
     ListOfVariablesItem, MmsBasicObjectClass, MmsObjectClass, MmsObjectName, MmsObjectScope,
     MmsTypeSpecification::TypeDescription,
-    MmsVariableAccessSpecification, VariableSpecification,
+    MmsVariableAccessSpecification, MmsWriteResult, VariableSpecification,
     parameters::{
         ParameterSupportOption::{Str1, Str2, Vlis, Vnam},
         ServiceSupportOption::{Conclude, DefineNamedVariableList, DeleteNamedVariableList, GetNameList, GetNamedVariableListAttribute, GetVariableAccessAttributes, Identify, InformationReport, Read, Write},
@@ -366,7 +366,7 @@ impl IccpSubsystemAssociationOperator {
                     operation.respond().await;
                 }
                 Ok(IccpOperation::StartTransferSet(operation)) => {
-                    operation.respond().await;
+                    operation.respond(MmsWriteResult::Success).await;
                 }
                 // Ok(MmsServiceMessage::DefineNamedVariableList(msg)) => {
                 //     msg.variable_list_name()

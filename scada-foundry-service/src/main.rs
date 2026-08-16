@@ -205,17 +205,39 @@ async fn fetch_iccp_data_points(State(context): State<WebAppContext>) -> (Status
     (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_data_points().await))
 }
 
-async fn create_iccp_data_point(State(state): State<WebAppContext>, Json(payload): Json<IccpDataPointSpecification>) -> (StatusCode, String) {
-    let data_point: IccpDataPointSpecification = match payload.try_into() {
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebServiceIccpDataPointSpecification {
+    pub association_id: String,
+    pub data_point_name: String,
+    pub data_point_type: String,
+    pub data_point_domain: Option<String>,
+}
+
+async fn create_iccp_data_point(State(state): State<WebAppContext>, Json(payload): Json<WebServiceIccpDataPointSpecification>) -> (StatusCode, String) {
+    let data_point: WebServiceIccpDataPointSpecification = match payload.try_into() {
         Ok(data_point) => data_point,
         Err(_) => return WebServiceResult::InternalError("An error occurred that should not be possible.".into()).into(),
     };
     return try_create_iccp_data_point(state, data_point).await.into();
 }
 
-async fn try_create_iccp_data_point(state: WebAppContext, data_point: IccpDataPointSpecification) -> WebServiceResult {
+async fn try_create_iccp_data_point(state: WebAppContext, web_service_data_point: WebServiceIccpDataPointSpecification) -> WebServiceResult {
+    let data_point = IccpDataPointSpecification {
+        association_id: web_service_data_point.association_id,
+        data_point_name: match web_service_data_point.data_point_domain {
+            Some(domain) if domain.len() > 0 => IccpDataPointName::Icc(domain, web_service_data_point.data_point_name),
+            _ => IccpDataPointName::Vcc(web_service_data_point.data_point_name),
+        },
+        data_point_type: match web_service_data_point.data_point_type.as_str() {
+            "RealQ" => IccpDataPointType::RealQ { initial_value: 0.0 },
+            _ => return WebServiceResult::BadRequest(format!("Unsupported type: {}", web_service_data_point.data_point_type)),
+        },
+        allow_write: true,
+    };
+
     let mut config = state.config.write().await;
-    if let Some(_) = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
+    if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
         return WebServiceResult::BadRequest("An association for the requested data point was not found".into());
     }
 
