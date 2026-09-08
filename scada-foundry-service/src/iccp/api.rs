@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IccpDataPointName {
-    Vcc(String),
-    Icc(String, String),
+    Vcc { name: String },
+    Icc { domain: String, name: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -66,6 +66,9 @@ pub struct IccpDataCenterParameters {
 
     #[serde(with = "hex")]
     pub psap: Vec<u8>,
+
+    pub host: String,
+    pub port: u16,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -78,8 +81,6 @@ pub struct IccpAssociation {
     pub domain: String,
     pub bilateral_table: String,
 
-    pub host: String,
-    pub port: u16,
     pub local_data_center_parameters: IccpDataCenterParameters,
     pub remote_data_center_parameters: IccpDataCenterParameters,
 }
@@ -95,7 +96,8 @@ pub enum IccpAssociationStatus {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct IccpAssociationState {
+pub struct IccpServerOperationalAssociation {
+    pub state: String,
+    pub status: String,
     pub association: IccpAssociation,
-    pub status: IccpAssociationStatus,
 }

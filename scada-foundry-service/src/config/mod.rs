@@ -7,16 +7,18 @@ use tokio::{
 };
 
 use crate::{
-    config::iccp::IccpConfiguration,
+    config::{acse::AcseConfiguration, iccp::IccpConfiguration},
     error::{ScadaFoundryError, to_app_error},
 };
 
+pub mod acse;
 pub mod iccp;
 
 #[derive(Serialize, Deserialize)]
 pub struct ApplicationConfiguration {
     #[serde(default = "default_resource")]
     pub filename: String,
+    pub acse: AcseConfiguration,
     pub iccp: IccpConfiguration,
 }
 
@@ -26,7 +28,7 @@ fn default_resource() -> String {
 
 impl ApplicationConfiguration {
     pub async fn new(filename: &str) -> Self {
-        Self { filename: filename.into(), iccp: IccpConfiguration { associations: vec![], data_points: vec![], transfer_sets: vec![] } }
+        Self { filename: filename.into(), acse: AcseConfiguration { acse_listeners: vec![] }, iccp: IccpConfiguration { associations: vec![], data_points: vec![], transfer_sets: vec![] } }
     }
 
     pub async fn load(filename: &str) -> Result<ApplicationConfiguration, ScadaFoundryError> {

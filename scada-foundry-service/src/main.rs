@@ -1,12 +1,18 @@
 pub mod api;
 pub mod config;
+pub mod connectors;
 mod context;
 pub mod core;
 pub mod error;
 pub mod iccp;
+mod model;
 pub mod webservice;
 
-use std::{collections::VecDeque, net::SocketAddr, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque, hash_map::Entry},
+    net::SocketAddr,
+    sync::Arc,
+};
 
 use anyhow::Error;
 use axum::{
@@ -37,14 +43,11 @@ use tracing::{error, warn};
 use uuid::{Uuid, uuid};
 
 use crate::{
-    api::ScadaFoundryEvent::{self, IccpAssociationUpdate, IccpDataPointUpdate},
-    config::{
+    api::ScadaFoundryEvent::{self, AcseConnectorStatusUpdate, IccpAssociationUpdate, IccpDataPointUpdate}, config::{
         ApplicationConfiguration,
         iccp::{IccpDataPointSpecification, IccpDataPointType},
-    },
-    iccp::{
-        IccpSubsystem,
-        api::{IccpAssociation, IccpAssociationState, IccpDataPointName, IccpDataPointValue},
+    }, connectors::acse::AcseSubsystem, iccp::{
+        IccpSubsystem, api::{IccpAssociation, IccpDataPointName, IccpDataPointValue, IccpServerOperationalAssociation},
     },
 };
 
@@ -60,7 +63,10 @@ struct Args {
 #[derive(Clone)]
 struct WebAppContext {
     pub config: Arc<RwLock<ApplicationConfiguration>>,
+
+    pub acse_subsystem: Arc<RwLock<AcseSubsystem>>,
     pub iccp_subsystem: Arc<RwLock<IccpSubsystem>>,
+
     pub stream_queue_sender: UnboundedSender<UnboundedSender<ScadaFoundryEvent>>,
 }
 
@@ -74,21 +80,44 @@ async fn main() -> Result<(), Error> {
     let (stream_queue_sender, mut stream_queue_receiver) = unbounded_channel();
     let (global_listener_sender, mut global_listener_receiver) = unbounded_channel();
 
-    let iccp_manager = Arc::new(RwLock::new(IccpSubsystem::new(global_listener_sender).await));
-    let web_app_context = WebAppContext { iccp_subsystem: iccp_manager.clone(), config: app_config.clone(), stream_queue_sender };
+    let acse_subsystem = Arc::new(RwLock::new(AcseSubsystem::new(global_listener_sender.clone())));
+    let iccp_subsystem = Arc::new(RwLock::new(IccpSubsystem::new(global_listener_sender.clone())));
+    let web_app_context = WebAppContext { acse_subsystem: acse_subsystem.clone(), iccp_subsystem: iccp_subsystem.clone(), config: app_config.clone(), stream_queue_sender };
 
-    app_config.write().await.iccp.data_points.push(IccpDataPointSpecification {
-        association_id: "123".into(),
-        data_point_name: IccpDataPointName::Vcc("POO".into()),
-        data_point_type: IccpDataPointType::RealQ { initial_value: 12.0 },
-        allow_write: true,
-    });
-    app_config.write().await.save().await;
+    {
+        let app_config = app_config.read().await;
+        let mut acse_subsystem = acse_subsystem.write().await;
+
+        for acse_listener in app_config.acse.acse_listeners.iter() {
+            match acse_listener {
+                config::acse::AcseListener::OsiStackAcseListener { id, host, port } => acse_subsystem.listen(id.clone(), host.clone(), *port).await,
+            }
+        }
+    }
+
+    {
+        let app_config = app_config.read().await;
+        let mut iccp_subsystem = iccp_subsystem.write().await;
+
+        for association in app_config.iccp.associations.iter() {
+            // iccp_subsystem.create_association(association.clone()).await;
+        }
+    }
+
+    // app_config.write().await.iccp.data_points.push(IccpDataPointSpecification {
+    //     association_id: "123".into(),
+    //     data_point_name: IccpDataPointName::Vcc("POO".into()),
+    //     data_point_type: IccpDataPointType::RealQ { initial_value: 12.0 },
+    //     allow_write: true,
+    // });
+    // app_config.write().await.save().await?;
 
     // TODO This lazily removes queues when events occur.
     // Can also call 'closed' on all the queues to remove them immediately after they are closed.
+    let queue_worker_iccp_manager = iccp_subsystem.clone();
     tokio::task::spawn(async move {
         let mut queues = VecDeque::new();
+
         loop {
             tokio::select! {
                 x = global_listener_receiver.recv() => match x {
@@ -111,7 +140,7 @@ async fn main() -> Result<(), Error> {
     });
 
     for iccp_association in app_config.write().await.iccp.associations.iter().cloned() {
-        iccp_manager.write().await.create_association(iccp_association).await;
+        // iccp_subsystem.write().await.create_association(iccp_association).await;
     }
 
     let cors = CorsLayer::permissive();
@@ -164,8 +193,8 @@ impl From<WebServiceResult> for StatusCode {
     }
 }
 
-async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpAssociationState>>) {
-    (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_associations().await))
+async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerOperationalAssociation>>) {
+    (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_server_associations().await))
 }
 
 async fn create_iccp_association(State(state): State<WebAppContext>, Json(payload): Json<IccpAssociation>) -> (StatusCode, String) {
@@ -197,7 +226,7 @@ async fn try_create_iccp_association(state: WebAppContext, mut association: Iccp
     };
     drop(config);
 
-    state.iccp_subsystem.write().await.create_association(association).await;
+    state.iccp_subsystem.write().await.register_server_association(association).await;
     WebServiceResult::Success(id)
 }
 
@@ -226,8 +255,8 @@ async fn try_create_iccp_data_point(state: WebAppContext, web_service_data_point
     let data_point = IccpDataPointSpecification {
         association_id: web_service_data_point.association_id,
         data_point_name: match web_service_data_point.data_point_domain {
-            Some(domain) if domain.len() > 0 => IccpDataPointName::Icc(domain, web_service_data_point.data_point_name),
-            _ => IccpDataPointName::Vcc(web_service_data_point.data_point_name),
+            Some(domain) if domain.len() > 0 => IccpDataPointName::Icc { domain, name: web_service_data_point.data_point_name },
+            _ => IccpDataPointName::Vcc { name: web_service_data_point.data_point_name },
         },
         data_point_type: match web_service_data_point.data_point_type.as_str() {
             "RealQ" => IccpDataPointType::RealQ { initial_value: 0.0 },
@@ -284,9 +313,16 @@ async fn ws_handler(ws: WebSocketUpgrade, user_agent: Option<TypedHeader<headers
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct AcseConnectorReportMessage {
+    pub kind: String,
+    pub state: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct IccpAssociationStateMessage {
     pub kind: String,
-    pub data: IccpAssociationState,
+    pub data: IccpAssociationReport,
 }
 
 async fn handle_socket(mut socket: WebSocket, context: WebAppContext) {
@@ -311,6 +347,14 @@ async fn handle_socket(mut socket: WebSocket, context: WebAppContext) {
             message = listener_receiver.recv() => match message {
                 Some(event) => {
                     match event {
+                        AcseConnectorStatusUpdate(acse_connector_status) => {
+                            let data = AcseConnectorReportMessage {
+                                kind: "IccpAssociationStateMessage".into(),
+                                state: acse_connector_status.state,
+                            };
+                            socket.send(Message::Text(serde_json::to_string_pretty(&data).unwrap().into())).await.unwrap()
+                        },
+
                         IccpAssociationUpdate(iccp_association_state) => {
                             warn!("{iccp_association_state:?}");
                             let data = IccpAssociationStateMessage {
