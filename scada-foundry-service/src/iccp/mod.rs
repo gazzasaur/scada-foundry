@@ -12,7 +12,10 @@ use tokio::{
 };
 
 use crate::{
-    api::ScadaFoundryEvent, connectors::acse::EventQueue, error::ScadaFoundryError, iccp::api::{IccpAssociation, IccpAssociationStatus, IccpServerOperationalAssociation},
+    api::ScadaFoundryEvent,
+    connectors::acse::EventQueue,
+    error::ScadaFoundryError,
+    iccp::api::{IccpAssociation, IccpAssociationStatus, IccpServerOperationalAssociation},
 };
 
 pub mod api;
@@ -72,17 +75,21 @@ async fn try_iccp_worker(status: &Arc<RwLock<IccpServerAssociationRegistration>>
     status.write().await.operational_associatiom.status = "Connecting".into();
     event_listener.send(ScadaFoundryEvent::IccpAssociationUpdate(status.read().await.operational_associatiom.clone()));
 
-    let iccp_server = RustyIccpServer::new(mms_server, domain, bilateral_table_id);
+    let mut iccp_server = RustyIccpServer::new(mms_server);
     loop {
-        match iccp_server.receive_operation().await {
-            Ok(op) => match op {
-                IccpOperation::MmsOperation(mms_service_message) => todo!(),
-                IccpOperation::StartTransferSet(start_transfer_set_operation) => todo!(),
-                IccpOperation::CreateDataSet(create_data_set_operation) => todo!(),
-                IccpOperation::GetDataSetNames(get_data_set_names_operation) => todo!(),
-                IccpOperation::GetNextDsTransferSet(get_next_ds_transfer_set_operation) => todo!(),
-            },
-            Err(e) => Err(e)?,
+        for operation in iccp_server.receive_operations().await? {
+            match operation {
+                IccpOperation::GetDataSetNames(operation) => todo!(),
+                IccpOperation::CreateDataSet(operation) => todo!(),
+
+                IccpOperation::Read(operation) => todo!(),
+
+                IccpOperation::GetNextDsTransferSet(operation) => todo!(),
+                IccpOperation::StartTransferSet(operation) => todo!(),
+
+                IccpOperation::MmsAaRead(operation) => todo!(),
+                IccpOperation::MmsOperation(operation) => todo!(),
+            }
         }
     }
 

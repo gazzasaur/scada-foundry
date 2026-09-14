@@ -228,7 +228,7 @@ checksum = "4d6867f1565b3aad85681f1015055b087fcfd840d6aeee6eee7f2da317603695"
 dependencies = [
  "autocfg",
  "libm",
- "num-bigint",
+ "num-bigint 0.4.8",
  "num-integer",
  "num-traits",
  "serde",
@@ -257,9 +257,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "2.13.1"
+version = "2.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
+checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 
 [[package]]
 name = "block-buffer"
@@ -284,9 +284,9 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "cc"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80"
+checksum = "a3eb0f42d6c360dc3f8a821f6bf2fdea7f72bfd36b3076eb0e6d1e9e0752fff4"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -427,7 +427,7 @@ dependencies = [
  "cookie-factory",
  "displaydoc",
  "nom",
- "num-bigint",
+ "num-bigint 0.4.8",
  "num-traits",
  "rusticata-macros",
 ]
@@ -918,14 +918,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-derive"
-version = "0.4.2"
+name = "num-bigint"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
+checksum = "93e7820bc0a80a0238e650327316f929ba18d5be054b647490a3a6a339f3e7c0"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-derive"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4e98dc3b890f6c23a0f9d3d491a2823d0dea0fa656302a13dd225fa924112a8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.119",
+ "syn 3.0.5",
 ]
 
 [[package]]
@@ -1161,10 +1171,10 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 [[package]]
 name = "rusty-acse"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "der-parser",
- "rand 0.9.5",
+ "rand 0.10.2",
  "rusty-copp",
  "rusty-cosp",
  "rusty-cotp",
@@ -1177,7 +1187,7 @@ dependencies = [
 [[package]]
 name = "rusty-copp"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "der-parser",
  "rusty-cosp",
@@ -1192,12 +1202,12 @@ dependencies = [
 [[package]]
 name = "rusty-cosp"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "bitfield",
  "bytes",
  "num-derive",
- "rand 0.9.5",
+ "rand 0.10.2",
  "rusty-cotp",
  "rusty-tpkt",
  "strum",
@@ -1209,10 +1219,10 @@ dependencies = [
 [[package]]
 name = "rusty-cotp"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "bytes",
- "rand 0.9.5",
+ "rand 0.10.2",
  "rusty-tpkt",
  "thiserror",
  "tokio",
@@ -1222,13 +1232,13 @@ dependencies = [
 [[package]]
 name = "rusty-iccp"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "async-trait",
  "der-parser",
- "num-bigint",
+ "num-bigint 0.5.1",
  "num-traits",
- "rand 0.9.5",
+ "rand 0.10.2",
  "rusty-acse",
  "rusty-copp",
  "rusty-cosp",
@@ -1239,12 +1249,13 @@ dependencies = [
  "serde",
  "thiserror",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
 name = "rusty-mms"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "der-parser",
  "num-traits",
@@ -1261,15 +1272,15 @@ dependencies = [
 [[package]]
 name = "rusty-mms-service"
 version = "0.9.2"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "async-trait",
  "chrono",
  "der-parser",
  "futures",
  "num-bigfloat",
- "num-bigint",
- "rand 0.9.5",
+ "num-bigint 0.5.1",
+ "rand 0.10.2",
  "rusty-acse",
  "rusty-copp",
  "rusty-cosp",
@@ -1284,7 +1295,7 @@ dependencies = [
 [[package]]
 name = "rusty-tpkt"
 version = "1.2.0"
-source = "git+https://github.com/gazzasaur/rusty-iccp#e815349ba83bc95b7b401bc04035f7ec6f3b781f"
+source = "git+https://github.com/gazzasaur/rusty-iccp#011ea060193ba1127397970873dc3c6eda22ba03"
 dependencies = [
  "bytes",
  "dyn-clone",
@@ -1312,7 +1323,7 @@ dependencies = [
  "der-parser",
  "futures",
  "hex",
- "num-bigint",
+ "num-bigint 0.4.8",
  "oid",
  "rand 0.10.2",
  "rusty-acse",
@@ -1449,9 +1460,9 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "smallvec"
-version = "1.16.0"
+version = "1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9be42f50aa861c555654aa3a37f52f4b1074bacf4e48fe0ef7fa584e80f1f0f"
+checksum = "ba467056f1b547ed52077911161fc86985becbc60e8e1857c8a144dab0def891"
 
 [[package]]
 name = "socket2"
@@ -1471,18 +1482,18 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.27.2"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
 dependencies = [
  "strum_macros",
 ]
 
 [[package]]
 name = "strum_macros"
-version = "0.27.2"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1769,9 +1780,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.26.0"
+version = "1.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5772d71c9be8a8a6ac2117d949c5b224c1b72241bb611d9a3012edcf8af7812"
+checksum = "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -1926,18 +1937,18 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "zerocopy"
-version = "0.8.56"
+version = "0.8.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "556764e583adb45a9f8d413c2a147fa7e8d821e48e12b14fd560b607998b75eb"
+checksum = "d35102a9f36d089ccae9e4c6802bc118be4487b80aaffc0ab4e0cf5ce92d2873"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.56"
+version = "0.8.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2ab42fc20575779bd240faa45f94a74256f755c0fa9e89f0ede20d91d0cdfc1"
+checksum = "146c01f5ab44258da43cf276c74a2763db2ff3969c9c652c3f2de07041d0b2bc"
 dependencies = [
  "proc-macro2",
  "quote",
