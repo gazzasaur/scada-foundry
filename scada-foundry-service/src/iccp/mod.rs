@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use futures::future::join_all;
+use rusty_iccp::{IccpOperation, IccpServer, RustyIccpServer};
 use rusty_mms_service::RustyMmsServiceServer;
 use tokio::{
     select,
@@ -58,10 +59,10 @@ async fn iccp_worker(status: Arc<RwLock<IccpServerAssociationRegistration>>, mut
     }
 }
 
-async fn try_iccp_worker(status: &Arc<RwLock<IccpServerAssociationRegistration>>, acse_receiver: &mut UnboundedReceiver<Box<dyn RustyMmsServiceServer>>, event_listener: &mut EventQueue) -> Result<(), ScadaFoundryError> {
+async fn try_iccp_worker(status: &Arc<RwLock<IccpServerAssociationRegistration>>, acse_receiver: &mut UnboundedReceiver<Box<dyn RustyMmsServiceServer>>, event_listener: &mut EventQueue) -> Result<(), anyhow::Error> {
     let notifier = status.read().await.notifier.clone();
 
-    let mms_service = select! {
+    let mms_server = select! {
         _ = notifier.notified() => return Ok(()),
         x = acse_receiver.recv() => match x {
             Some(x) => x,
@@ -70,6 +71,20 @@ async fn try_iccp_worker(status: &Arc<RwLock<IccpServerAssociationRegistration>>
     };
     status.write().await.operational_associatiom.status = "Connecting".into();
     event_listener.send(ScadaFoundryEvent::IccpAssociationUpdate(status.read().await.operational_associatiom.clone()));
+
+    let iccp_server = RustyIccpServer::new(mms_server, domain, bilateral_table_id);
+    loop {
+        match iccp_server.receive_operation().await {
+            Ok(op) => match op {
+                IccpOperation::MmsOperation(mms_service_message) => todo!(),
+                IccpOperation::StartTransferSet(start_transfer_set_operation) => todo!(),
+                IccpOperation::CreateDataSet(create_data_set_operation) => todo!(),
+                IccpOperation::GetDataSetNames(get_data_set_names_operation) => todo!(),
+                IccpOperation::GetNextDsTransferSet(get_next_ds_transfer_set_operation) => todo!(),
+            },
+            Err(e) => Err(e)?,
+        }
+    }
 
     Ok(())
 }
