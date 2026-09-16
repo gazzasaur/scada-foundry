@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum AcseListener {
     OsiStackAcseListener {
         id: String,
+        name: String,
         host: String,
         port: u16,
     }

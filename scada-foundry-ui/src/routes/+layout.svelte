@@ -7,7 +7,7 @@
 	import { Navbar, NavBrand, Popover, Sidebar, SidebarDropdownWrapper, SidebarGroup, SidebarItem } from 'flowbite-svelte';
 	import './layout.css';
 	import { onMount } from 'svelte';
-	import { CodeMergeOutline, ShareNodesOutline } from 'flowbite-svelte-icons';
+	import { ArrowUpDownOutline, CodeMergeOutline, ShareNodesOutline } from 'flowbite-svelte-icons';
 	import { createContext } from 'svelte';
 	import { ApplicationContext, getApplicationContext, setApplicationContext } from '$lib/contexts/ApplicationContext';
 
@@ -76,6 +76,7 @@
 						{#snippet icon()}
 							<ShareNodesOutline class="h-5 w-5 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white" />
 						{/snippet}
+						<SidebarItem label="ACSE Listeners" class="mt-1 mb-1" href={resolve('/iccp/acse')} />
 						<SidebarItem label="Associations" class="mt-1 mb-1" href={resolve('/iccp/associations')} />
 						<SidebarItem label="Data Points" class="mt-1 mb-1" href={resolve('/iccp/datapoints')} />
 						<SidebarItem label="Data Sets" class="mt-1 mb-1" href={resolve('/iccp/datasets')} />

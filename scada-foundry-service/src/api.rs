@@ -1,8 +1,8 @@
-use crate::{connectors::acse::AcseConnectorStatus, iccp::api::{IccpDataPointValue, IccpServerOperationalAssociation}};
+use crate::{connectors::acse::AcseListenerOperationalReport, iccp::api::{IccpDataPointValue, IccpServerOperationalAssociation}};
 
 #[derive(Clone)]
 pub enum ScadaFoundryEvent {
-    AcseConnectorStatusUpdate(AcseConnectorStatus),
+    AcseListenerReport(AcseListenerOperationalReport),
 
     IccpAssociationUpdate(IccpServerOperationalAssociation),
     IccpDataPointUpdate(IccpDataPointValue),

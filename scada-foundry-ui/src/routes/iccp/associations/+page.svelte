@@ -8,7 +8,6 @@
 	import type { IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
 	import NewCalledAssociation from './NewCalledAssociation.svelte';
 	import CalledAssociationsTable from './CalledAssociationsTable.svelte';
-	import ListenerAssociationsTable from './ListenerAssociationsTable.svelte';
 	import CallingAssociationsTable from './CallingAssociationsTable.svelte';
 
 	let newTaseCalled = $state(false);
@@ -65,13 +64,6 @@
 				<Button color="blue" onclick={() => (newTaseCalling = true)}>Create</Button>
 			</div>
 			<CallingAssociationsTable loading clientAssociations></CallingAssociationsTable>
-		</TabItem>
-		<TabItem title="Listener">
-			<div class="mb-2 flex justify-between">
-				<Heading tag="h3">Listeners</Heading>
-				<Button color="blue" onclick={() => (newTaseCalled = true)}>Create</Button>
-			</div>
-			<ListenerAssociationsTable loading serverAssociations></ListenerAssociationsTable>
 		</TabItem>
 		<TabItem title="Called">
 			<div class="mb-2 flex justify-between">

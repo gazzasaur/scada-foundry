@@ -5,7 +5,6 @@ use crate::iccp::converter::serialise_bigint;
 use num_bigint::BigInt;
 use oid::ObjectIdentifier;
 use rusty_iccp::IccpData;
-use rusty_iccp::IccpScopedIdentifier;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -101,6 +100,4 @@ pub struct IccpServerOperationalAssociation {
     pub state: String,
     pub status: String,
     pub association: IccpAssociation,
-
-    pub datasets: HashMap<IccpScopedIdentifier, Vec<IccpDataPointValue>>;
 }

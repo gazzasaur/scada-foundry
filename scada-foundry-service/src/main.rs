@@ -43,11 +43,16 @@ use tracing::{error, warn};
 use uuid::{Uuid, uuid};
 
 use crate::{
-    api::ScadaFoundryEvent::{self, AcseConnectorStatusUpdate, IccpAssociationUpdate, IccpDataPointUpdate}, config::{
+    api::ScadaFoundryEvent::{self, AcseListenerReport, IccpAssociationUpdate, IccpDataPointUpdate},
+    config::{
         ApplicationConfiguration,
+        acse::AcseListener,
         iccp::{IccpDataPointSpecification, IccpDataPointType},
-    }, connectors::acse::AcseSubsystem, iccp::{
-        IccpSubsystem, api::{IccpAssociation, IccpDataPointName, IccpDataPointValue, IccpServerOperationalAssociation},
+    },
+    connectors::acse::{AcseListenerOperationalReport, AcseSubsystem},
+    iccp::{
+        IccpSubsystem,
+        api::{IccpAssociation, IccpDataPointName, IccpDataPointValue, IccpServerOperationalAssociation},
     },
 };
 
@@ -90,18 +95,17 @@ async fn main() -> Result<(), Error> {
 
         for acse_listener in app_config.acse.acse_listeners.iter() {
             match acse_listener {
-                config::acse::AcseListener::OsiStackAcseListener { id, host, port } => acse_subsystem.listen(id.clone(), host.clone(), *port).await,
+                config::acse::AcseListener::OsiStackAcseListener { id, name, host, port } => acse_subsystem.listen(id.clone(), name.clone(), host.clone(), *port).await,
             }
         }
     }
 
     {
         let app_config = app_config.read().await;
-        let mut iccp_subsystem = iccp_subsystem.write().await;
+        let mut acse_subsystem = acse_subsystem.write().await;
 
-        for association in app_config.iccp.associations.iter() {
-            // iccp_subsystem.create_association(association.clone()).await;
-        }
+        acse_subsystem.listen(Uuid::new_v4().to_string(), "Default".into(), "0.0.0.0".into(), 102).await;
+        app_config.save().await?;
     }
 
     // app_config.write().await.iccp.data_points.push(IccpDataPointSpecification {
@@ -146,10 +150,11 @@ async fn main() -> Result<(), Error> {
     let cors = CorsLayer::permissive();
     let app = Router::new()
         .route("/", get(root))
+        .route("/app/api/fetchacselisteners", get(fetch_acse_listeners))
         .route("/app/api/fetchiccpassociations", get(fetch_iccp_associations))
         .route("/app/api/createiccpassociation", post(create_iccp_association))
-        .route("/app/api/fetchiccpdatapoints", get(fetch_iccp_data_points))
-        .route("/app/api/createiccpdatapoint", post(create_iccp_data_point))
+        // .route("/app/api/fetchiccpdatapoints", get(fetch_iccp_data_points))
+        // .route("/app/api/createiccpdatapoint", post(create_iccp_data_point))
         .route("/app/ws", any(ws_handler))
         .with_state(web_app_context)
         .layer(TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::default().include_headers(true)))
@@ -193,6 +198,10 @@ impl From<WebServiceResult> for StatusCode {
     }
 }
 
+async fn fetch_acse_listeners(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<AcseListenerOperationalReport>>) {
+    (StatusCode::OK, Json(context.acse_subsystem.read().await.list_listeners().await))
+}
+
 async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerOperationalAssociation>>) {
     (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_server_associations().await))
 }
@@ -230,9 +239,9 @@ async fn try_create_iccp_association(state: WebAppContext, mut association: Iccp
     WebServiceResult::Success(id)
 }
 
-async fn fetch_iccp_data_points(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpDataPointValue>>) {
-    (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_data_points().await))
-}
+// async fn fetch_iccp_data_points(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpDataPointValue>>) {
+//     (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_data_points().await))
+// }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -243,68 +252,68 @@ pub struct WebServiceIccpDataPointSpecification {
     pub data_point_domain: Option<String>,
 }
 
-async fn create_iccp_data_point(State(state): State<WebAppContext>, Json(payload): Json<WebServiceIccpDataPointSpecification>) -> (StatusCode, String) {
-    let data_point: WebServiceIccpDataPointSpecification = match payload.try_into() {
-        Ok(data_point) => data_point,
-        Err(_) => return WebServiceResult::InternalError("An error occurred that should not be possible.".into()).into(),
-    };
-    return try_create_iccp_data_point(state, data_point).await.into();
-}
+// async fn create_iccp_data_point(State(state): State<WebAppContext>, Json(payload): Json<WebServiceIccpDataPointSpecification>) -> (StatusCode, String) {
+//     let data_point: WebServiceIccpDataPointSpecification = match payload.try_into() {
+//         Ok(data_point) => data_point,
+//         Err(_) => return WebServiceResult::InternalError("An error occurred that should not be possible.".into()).into(),
+//     };
+//     return try_create_iccp_data_point(state, data_point).await.into();
+// }
 
-async fn try_create_iccp_data_point(state: WebAppContext, web_service_data_point: WebServiceIccpDataPointSpecification) -> WebServiceResult {
-    let data_point = IccpDataPointSpecification {
-        association_id: web_service_data_point.association_id,
-        data_point_name: match web_service_data_point.data_point_domain {
-            Some(domain) if domain.len() > 0 => IccpDataPointName::Icc { domain, name: web_service_data_point.data_point_name },
-            _ => IccpDataPointName::Vcc { name: web_service_data_point.data_point_name },
-        },
-        data_point_type: match web_service_data_point.data_point_type.as_str() {
-            "RealQ" => IccpDataPointType::RealQ { initial_value: 0.0 },
-            _ => return WebServiceResult::BadRequest(format!("Unsupported type: {}", web_service_data_point.data_point_type)),
-        },
-        allow_write: true,
-    };
+// async fn try_create_iccp_data_point(state: WebAppContext, web_service_data_point: WebServiceIccpDataPointSpecification) -> WebServiceResult {
+//     let data_point = IccpDataPointSpecification {
+//         association_id: web_service_data_point.association_id,
+//         data_point_name: match web_service_data_point.data_point_domain {
+//             Some(domain) if domain.len() > 0 => IccpDataPointName::Icc { domain, name: web_service_data_point.data_point_name },
+//             _ => IccpDataPointName::Vcc { name: web_service_data_point.data_point_name },
+//         },
+//         data_point_type: match web_service_data_point.data_point_type.as_str() {
+//             "RealQ" => IccpDataPointType::RealQ { initial_value: 0.0 },
+//             _ => return WebServiceResult::BadRequest(format!("Unsupported type: {}", web_service_data_point.data_point_type)),
+//         },
+//         allow_write: true,
+//     };
 
-    let mut config = state.config.write().await;
-    if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
-        return WebServiceResult::BadRequest("An association for the requested data point was not found".into());
-    }
+//     let mut config = state.config.write().await;
+//     if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
+//         return WebServiceResult::BadRequest("An association for the requested data point was not found".into());
+//     }
 
-    if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
-        error!("The association does not exist: {}", data_point.association_id);
-        return WebServiceResult::BadRequest("Failed to store association".into());
-    }
-    for existing_point in config.iccp.data_points.iter() {
-        if existing_point.association_id == data_point.association_id && existing_point.data_point_name == data_point.data_point_name {
-            error!("The data point already exists on association: {}", existing_point.association_id);
-            return WebServiceResult::BadRequest("Failed to store association".into());
-        }
-    }
-    config.iccp.data_points.push(data_point.clone());
+//     if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
+//         error!("The association does not exist: {}", data_point.association_id);
+//         return WebServiceResult::BadRequest("Failed to store association".into());
+//     }
+//     for existing_point in config.iccp.data_points.iter() {
+//         if existing_point.association_id == data_point.association_id && existing_point.data_point_name == data_point.data_point_name {
+//             error!("The data point already exists on association: {}", existing_point.association_id);
+//             return WebServiceResult::BadRequest("Failed to store association".into());
+//         }
+//     }
+//     config.iccp.data_points.push(data_point.clone());
 
-    if let Err(e) = config.save().await {
-        error!("{e}");
-        return WebServiceResult::InternalError("Failed to store association".into());
-    };
-    drop(config);
+//     if let Err(e) = config.save().await {
+//         error!("{e}");
+//         return WebServiceResult::InternalError("Failed to store association".into());
+//     };
+//     drop(config);
 
-    state
-        .iccp_subsystem
-        .write()
-        .await
-        .create_data_point(IccpDataPointValue {
-            association_id: data_point.association_id,
-            data_point_name: data_point.data_point_name,
-            value: (&data_point.data_point_type).into(),
-            allow_write: data_point.allow_write,
-            recorded: 0,
-            source: "Initial".into(),
-            updated: 0,
-            timestamp: None,
-        })
-        .await;
-    WebServiceResult::Success("".into())
-}
+//     state
+//         .iccp_subsystem
+//         .write()
+//         .await
+//         .create_data_point(IccpDataPointValue {
+//             association_id: data_point.association_id,
+//             data_point_name: data_point.data_point_name,
+//             value: (&data_point.data_point_type).into(),
+//             allow_write: data_point.allow_write,
+//             recorded: 0,
+//             source: "Initial".into(),
+//             updated: 0,
+//             timestamp: None,
+//         })
+//         .await;
+//     WebServiceResult::Success("".into())
+// }
 
 async fn ws_handler(ws: WebSocketUpgrade, user_agent: Option<TypedHeader<headers::UserAgent>>, ConnectInfo(addr): ConnectInfo<SocketAddr>, State(context): State<WebAppContext>) -> impl IntoResponse {
     // Finalize the upgrade handshake
@@ -313,16 +322,16 @@ async fn ws_handler(ws: WebSocketUpgrade, user_agent: Option<TypedHeader<headers
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct AcseConnectorReportMessage {
+pub struct AcseListenerReportMessage {
     pub kind: String,
-    pub state: String,
+    pub data: AcseListenerOperationalReport,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct IccpAssociationStateMessage {
     pub kind: String,
-    pub data: IccpAssociationReport,
+    pub data: IccpServerOperationalAssociation,
 }
 
 async fn handle_socket(mut socket: WebSocket, context: WebAppContext) {
@@ -347,10 +356,10 @@ async fn handle_socket(mut socket: WebSocket, context: WebAppContext) {
             message = listener_receiver.recv() => match message {
                 Some(event) => {
                     match event {
-                        AcseConnectorStatusUpdate(acse_connector_status) => {
-                            let data = AcseConnectorReportMessage {
-                                kind: "IccpAssociationStateMessage".into(),
-                                state: acse_connector_status.state,
+                        AcseListenerReport(acse_connector_status) => {
+                            let data = AcseListenerReportMessage {
+                                kind: "AcseListenerReportMessage".into(),
+                                data: acse_connector_status,
                             };
                             socket.send(Message::Text(serde_json::to_string_pretty(&data).unwrap().into())).await.unwrap()
                         },

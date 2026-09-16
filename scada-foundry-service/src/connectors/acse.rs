@@ -12,6 +12,7 @@ use rusty_cosp::{CospConnectionParameters, RustyCospAcceptorIsoStack};
 use rusty_cotp::{CotpConnectionParameters, CotpResponder, RustyCotpResponder};
 use rusty_mms_service::{RustyMmsServiceServer, accept_mms_service_server_connect};
 use rusty_tpkt::{TcpTpktConnection, TcpTpktReader, TcpTpktServer, TcpTpktWriter};
+use serde::{Deserialize, Serialize};
 use tokio::sync::{
     RwLock,
     mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
@@ -28,14 +29,35 @@ pub type ConnectionQueue = UnboundedSender<Box<dyn RustyMmsServiceServer>>;
 
 type RegistrationsMap = Arc<RwLock<HashMap<String, AcseListenerRegistration>>>;
 
-#[derive(Clone, Debug)]
-pub struct AcseConnectorStatus {
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AcseListenerOperationalReport {
     pub id: String,
-    pub state: String,
+    pub name: String,
+
+    pub host: String,
+    pub port: u16,
+
+    pub status: String,
+    // pub status: String, TODO
+
+    pub registrations: Vec<AcseListenerRegistrationOperationalReport>,
 }
 
-struct AcseListenerRegistration {
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AcseListenerRegistrationOperationalReport {
     pub id: String,
+    pub name: String,
+    pub subsystem_name: String,
+    pub called: IccpDataCenterParameters,
+    pub calling: IccpDataCenterParameters,
+}
+
+pub struct AcseListenerRegistration {
+    pub id: String,
+    pub name: String,
+    pub subsystem_name: String,
     pub listener: ConnectionQueue,
 
     pub called: IccpDataCenterParameters,
@@ -44,20 +66,45 @@ struct AcseListenerRegistration {
 
 pub struct AcseSubsystem {
     event_listener: EventQueue,
-    managers: Arc<RwLock<HashMap<String, AcseListenerManager>>>,
+    listeners: Arc<RwLock<HashMap<String, AcseListenerManager>>>,
 }
 
 impl AcseSubsystem {
     pub fn new(event_listener: EventQueue) -> Self {
-        return Self { managers: Arc::new(RwLock::new(HashMap::new())), event_listener };
+        return Self { listeners: Arc::new(RwLock::new(HashMap::new())), event_listener };
     }
 
-    pub async fn listen(&mut self, id: String, host: String, port: u16) {
-        self.managers.write().await.insert(id.clone(), AcseListenerManager::new(id, host, port, self.event_listener.clone()));
+    pub async fn list_listeners(&self) -> Vec<AcseListenerOperationalReport> {
+        let mut reports = vec![];
+        for listener in self.listeners.read().await.values() {
+            let mut registrations = vec![];
+            for registration in listener.registrations.read().await.values() {
+                registrations.push(AcseListenerRegistrationOperationalReport {
+                    id: registration.id.clone(),
+                    name: registration.name.clone(),
+                    subsystem_name: registration.subsystem_name.clone(),
+                    called: registration.called.clone(),
+                    calling: registration.calling.clone(),
+                });
+            }
+            reports.push(AcseListenerOperationalReport {
+                id: listener.id.clone(),
+                name: listener.name.clone(),
+                host: listener.host.clone(),
+                port: listener.port,
+                status: listener.status.read().await.clone(),
+                registrations: vec![],
+            });
+        }
+        reports
+    }
+
+    pub async fn listen(&mut self, id: String, name: String, host: String, port: u16) {
+        self.listeners.write().await.insert(id.clone(), AcseListenerManager::new(id, name, host, port, self.event_listener.clone()));
     }
 
     pub async fn register(&mut self, id: String, registration: AcseListenerRegistration) {
-        match self.managers.write().await.entry(id.clone()) {
+        match self.listeners.write().await.entry(id.clone()) {
             Entry::Occupied(x) => {
                 x.get().registrations.write().await.insert(registration.id.clone(), registration);
                 ()
@@ -71,21 +118,27 @@ pub struct AcseListenerManager {
     // This will terminate the worked if the parent goes out of scope.
     _notifier: UnboundedSender<()>,
 
-    state: Arc<RwLock<String>>,
+    id: String,
+    name: String,
+
+    host: String,
+    port: u16,
+
+    status: Arc<RwLock<String>>,
     registrations: RegistrationsMap,
 }
 
 impl AcseListenerManager {
-    pub fn new(id: String, host: String, port: u16, event_listener: EventQueue) -> Self {
-        let state = Arc::new(RwLock::new("Idle".into()));
+    pub fn new(id: String, name: String, host: String, port: u16, event_listener: EventQueue) -> Self {
+        let status = Arc::new(RwLock::new("Idle".into()));
         let registrations = Arc::new(RwLock::new(HashMap::new()));
         let (notifier_sender, notifier_receiver) = unbounded_channel();
-        tokio::task::spawn(acse_worker(id, state.clone(), host.clone(), port, registrations.clone(), event_listener, notifier_receiver));
-        Self { state, _notifier: notifier_sender, registrations }
+        tokio::task::spawn(acse_worker(id.clone(), name.clone(), status.clone(), host.clone(), port, registrations.clone(), event_listener, notifier_receiver));
+        Self { id, name, host, port, status, _notifier: notifier_sender, registrations }
     }
 
     pub async fn state(&self) -> String {
-        (*&self.state.read().await).clone()
+        (*&self.status.read().await).clone()
     }
 
     pub async fn register(&mut self, registration: AcseListenerRegistration) {
@@ -93,20 +146,22 @@ impl AcseListenerManager {
     }
 }
 
-async fn acse_worker(id: String, state: Arc<RwLock<String>>, host: String, port: u16, registrations: RegistrationsMap, mut event_listener: EventQueue, mut notifier: UnboundedReceiver<()>) {
+async fn acse_worker(id: String, name: String, state: Arc<RwLock<String>>, host: String, port: u16, registrations: RegistrationsMap, mut event_listener: EventQueue, mut notifier: UnboundedReceiver<()>) {
     loop {
         *state.write().await = "Idle".into();
-        match event_listener.send(ScadaFoundryEvent::AcseConnectorStatusUpdate(AcseConnectorStatus { id: id.clone(), state: "Idle".into() })) {
+        // TODO Registrations
+        match event_listener.send(ScadaFoundryEvent::AcseListenerReport(AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port: port, status: "Idle".into(), registrations: vec![] })) {
             Ok(()) => (),
             Err(_) => return,
         }
 
-        match try_acse_worker(id.clone(), state.clone(), &host, port, &registrations, &mut event_listener, &mut notifier).await {
+        match try_acse_worker(id.clone(), name.clone(), state.clone(), &host, port, &registrations, &mut event_listener, &mut notifier).await {
             Ok(()) => return,
             Err(e) => {
                 error!("{e}");
                 *state.write().await = "Error".into();
-                match event_listener.send(ScadaFoundryEvent::AcseConnectorStatusUpdate(AcseConnectorStatus { id: id.clone(), state: "Error".into() })) {
+                // TODO Registrations
+                match event_listener.send(ScadaFoundryEvent::AcseListenerReport(AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port, status: "Error".into(), registrations: vec![] })) {
                     Ok(()) => (),
                     Err(_) => return,
                 }
@@ -116,9 +171,10 @@ async fn acse_worker(id: String, state: Arc<RwLock<String>>, host: String, port:
     }
 }
 
-async fn try_acse_worker(id: String, state: Arc<RwLock<String>>, host: &String, port: u16, registrations: &RegistrationsMap, event_listener: &mut EventQueue, notifier: &mut UnboundedReceiver<()>) -> Result<(), anyhow::Error> {
+async fn try_acse_worker(id: String, name: String, state: Arc<RwLock<String>>, host: &String, port: u16, registrations: &RegistrationsMap, event_listener: &mut EventQueue, notifier: &mut UnboundedReceiver<()>) -> Result<(), anyhow::Error> {
     *state.write().await = "Opening".into();
-    match event_listener.send(ScadaFoundryEvent::AcseConnectorStatusUpdate(AcseConnectorStatus { id: id.clone(), state: "Opening".into() })) {
+    // TODO registrations
+    match event_listener.send(ScadaFoundryEvent::AcseListenerReport(AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port, status: "Opening".into(), registrations: vec![] })) {
         Ok(()) => (),
         Err(_) => return Ok(()),
     }
@@ -127,7 +183,8 @@ async fn try_acse_worker(id: String, state: Arc<RwLock<String>>, host: &String, 
     let listener = TcpTpktServer::listen(address).await?;
 
     *state.write().await = "Listening".into();
-    match event_listener.send(ScadaFoundryEvent::AcseConnectorStatusUpdate(AcseConnectorStatus { id: id.clone(), state: "Listening".into() })) {
+    // TODO Registrations
+    match event_listener.send(ScadaFoundryEvent::AcseListenerReport(AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port, status: "Listening".into(), registrations: vec![] })) {
         Ok(()) => (),
         Err(_) => return Ok(()),
     }
