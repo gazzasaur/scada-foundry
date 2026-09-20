@@ -33,7 +33,7 @@ export interface AcseListener {
 	port: number;
 }
 
-export interface AcseListenerRegistration {}
+export interface AcseListenerRegistration { }
 
 export interface AcseListenerReport {
 	id: string;
@@ -58,25 +58,25 @@ export interface IccpDataPoint {
 }
 
 export class ScadaForgeRequestService {
-	constructor(private url: string) {}
+	constructor(private url: string) { }
 
 	public async fetchAcseListeners(): Promise<Array<AcseListenerReport>> {
 		return this.fromJson(await (await fetch(`${this.url}/fetchacselisteners`)).text()) as Array<AcseListenerReport>;
 	}
 
-	public async createAcseListener(listener: AcseListener): Promise<String> {
-		return await this.postWithReturnId(`${this.url}/createacselistener`, listener);
+	public async createAcseListener(listener: AcseListener): Promise<AcseListenerReport> {
+		return (await this.postWithResult(`${this.url}/createacselistener`, listener)) as AcseListenerReport;
 	}
 
-	public async updateAcseAssociation(listener: IccpAssociation): Promise<String> {
-		return await this.postWithReturnId(`${this.url}/updateiccpassociation`, listener);
+	public async updateAcseListener(listener: AcseListener): Promise<AcseListenerReport> {
+		return (await this.postWithResult(`${this.url}/createacselistener`, listener)) as AcseListenerReport;
 	}
 
 	public async fetchIccpAssociations(): Promise<Array<IccpAssociationState>> {
 		return this.fromJson(await (await fetch(`${this.url}/fetchiccpassociations`)).text()) as Array<IccpAssociationState>;
 	}
 
-	public async fetchIccpAssociations(): Promise<Array<IccpAssociation>> {
+	public async fetchIccpDatapoints(): Promise<Array<IccpAssociation>> {
 		return (await (await fetch(`${this.url}/fetchiccpdatapoints`)).json()) as Array<IccpDataPoint>;
 	}
 
@@ -111,6 +111,16 @@ export class ScadaForgeRequestService {
 				body: this.toJson(data)
 			})
 		).text();
+	}
+
+	private async postWithResult(url: string, data: any): Promise<any> {
+		return this.fromJson(await (
+			await fetch(url, {
+				method: 'POST',
+				headers: { 'Content-type': 'application/json' },
+				body: this.toJson(data)
+			})
+		).text());
 	}
 
 	private toJson(data: any): string {

@@ -6,6 +6,8 @@
 	import { Tabs, TabItem } from 'flowbite-svelte';
 	import type { AcseListenerReport, IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
 	import EditAcseListener from './EditAcseListener.svelte';
+	import AcseListenerTable from './AcseListenerTable.svelte';
+	import { deepEqual } from 'fast-equals';
 
 	let newAcseListener = $state(false);
 	let applicationContext = getApplicationContext();
@@ -16,9 +18,10 @@
 	let listenerId = '';
 	let itemsBacklog = [];
 
-	function updateAcseListenerReport(report: AcseListenerReport) {
+	function updateAcseListenerReport(original: AcseListenerReport, report: AcseListenerReport) {
 		let existingReport = acseListeners.find((x) => (x.id = report.id));
-		if (!!existingReport) {
+
+		if (!!existingReport && deepEqual(original, existingReport)) {
 			Object.assign(existingReport, report);
 		} else {
 			acseListeners.push(report);

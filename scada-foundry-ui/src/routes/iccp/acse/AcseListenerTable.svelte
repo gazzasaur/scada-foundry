@@ -4,13 +4,17 @@
 	import { PenOutline, PlusOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { AcseListenerReport, IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
+	import type { AcseListener, AcseListenerReport, IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
 	import NewAcseListener from './EditAcseListener.svelte';
 	import EditAcseListener from './EditAcseListener.svelte';
 
+	let editAcseListener = $state(false);
+	let editAcseListenerValue = $state<undefined | AcseListener>(undefined);
+	let editedAcseListener = $state({ id: '', name: '', hoost: '', port: 0 });
+
 	let applicationContext = getApplicationContext();
 
-	let { loading, acseListeners }: { loading: boolean, acseListeners: Array<AcseListenerReport> } = $props();
+	let { loading, acseListeners }: { loading: boolean; acseListeners: Array<AcseListenerReport> } = $props();
 </script>
 
 <Table>
@@ -25,7 +29,15 @@
 	<TableBody>
 		{#each acseListeners as acseListener}
 			<TableBodyRow>
-				<TableBodyCell class="w-0.5"><PenOutline class="cursor-pointer" onclick /></TableBodyCell>
+				<TableBodyCell class="w-0.5"
+					><PenOutline
+						class="cursor-pointer"
+						onclick={() => {
+							editAcseListenerValue = acseListener;
+							editAcseListener = true;
+						}}
+					/></TableBodyCell
+				>
 				<TableBodyCell>{acseListener.name}</TableBodyCell>
 				<TableBodyCell>{acseListener.host}</TableBodyCell>
 				<TableBodyCell>{acseListener.port}</TableBodyCell>
@@ -51,4 +63,4 @@
 	</TableBody>
 </Table>
 
-<EditAcseListener bind:open={newAcseListener}></EditAcseListener>
+<EditAcseListener bind:open={editAcseListener} initialValue={editAcseListenerValue} onsuccess={() => {}}></EditAcseListener>
