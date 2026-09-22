@@ -13,16 +13,16 @@ use rusty_cotp::{CotpConnectionParameters, CotpResponder, RustyCotpResponder};
 use rusty_mms_service::{RustyMmsServiceServer, accept_mms_service_server_connect};
 use rusty_tpkt::{TcpTpktConnection, TcpTpktReader, TcpTpktServer, TcpTpktWriter};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{
-    RwLock,
-    mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
+use tokio::{
+    select,
+    sync::{
+        RwLock,
+        mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
+    },
 };
 use tracing::{error, warn};
 
-use crate::{
-    api::ScadaFoundryEvent,
-    iccp::{api::IccpDataCenterParameters, converter::convert_object_identifiers},
-};
+use crate::{api::ScadaFoundryEvent, config::acse::AcseIdentityParameters};
 
 pub type EventQueue = UnboundedSender<ScadaFoundryEvent>;
 pub type ConnectionQueue = UnboundedSender<Box<dyn RustyMmsServiceServer>>;
@@ -40,7 +40,6 @@ pub struct AcseListenerOperationalReport {
 
     pub status: String,
     // pub status: String, TODO
-
     pub registrations: Vec<AcseListenerRegistrationOperationalReport>,
 }
 
@@ -50,8 +49,8 @@ pub struct AcseListenerRegistrationOperationalReport {
     pub id: String,
     pub name: String,
     pub subsystem_name: String,
-    pub called: IccpDataCenterParameters,
-    pub calling: IccpDataCenterParameters,
+    pub called: AcseIdentityParameters,
+    pub calling: AcseIdentityParameters,
 }
 
 pub struct AcseListenerRegistration {
@@ -60,8 +59,8 @@ pub struct AcseListenerRegistration {
     pub subsystem_name: String,
     pub listener: ConnectionQueue,
 
-    pub called: IccpDataCenterParameters,
-    pub calling: IccpDataCenterParameters,
+    pub called: AcseIdentityParameters,
+    pub calling: AcseIdentityParameters,
 }
 
 pub struct AcseSubsystem {
@@ -87,20 +86,49 @@ impl AcseSubsystem {
                     calling: registration.calling.clone(),
                 });
             }
-            reports.push(AcseListenerOperationalReport {
-                id: listener.id.clone(),
-                name: listener.name.clone(),
-                host: listener.host.clone(),
-                port: listener.port,
-                status: listener.status.read().await.clone(),
-                registrations: vec![],
-            });
+            reports.push(AcseListenerOperationalReport { id: listener.id.clone(), name: listener.name.clone(), host: listener.host.clone(), port: listener.port, status: listener.status.read().await.clone(), registrations: vec![] });
         }
         reports
     }
 
-    pub async fn listen(&mut self, id: String, name: String, host: String, port: u16) {
-        self.listeners.write().await.insert(id.clone(), AcseListenerManager::new(id, name, host, port, self.event_listener.clone()));
+    pub async fn listen(&mut self, id: String, name: String, host: String, port: u16) -> AcseListenerOperationalReport {
+        let mut listeners = self.listeners.write().await;
+
+        return match listeners.entry(id.clone()) {
+            Entry::Occupied(mut occupied_entry) => {
+                let _ = occupied_entry.get()._notifier.send(());
+                occupied_entry.get()._notifier.closed().await;
+
+                let listener_record = AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port, status: "Initialising".into(), registrations: vec![] };
+
+                let registrations = occupied_entry.get_mut().registrations.write().await.drain().collect::<Vec<_>>();
+                let mut new_entry = AcseListenerManager::new(id.clone(), name.clone(), host.clone(), port, self.event_listener.clone());
+                for (_, registration) in registrations {
+                    new_entry.register(registration).await;
+                }
+                occupied_entry.insert(new_entry);
+                listener_record
+            }
+            Entry::Vacant(vacant_entry) => {
+                let listener_record = AcseListenerOperationalReport { id: id.clone(), name: name.clone(), host: host.clone(), port, status: "Initialising".into(), registrations: vec![] };
+                vacant_entry.insert_entry(AcseListenerManager::new(id, name, host, port, self.event_listener.clone()));
+                listener_record
+            }
+        };
+    }
+
+    pub async fn close(&mut self, id: String) {
+        let mut listeners = self.listeners.write().await;
+
+        return match listeners.entry(id.clone()) {
+            Entry::Occupied(occupied_entry) => {
+                let _ = occupied_entry.get()._notifier.send(());
+                occupied_entry.get()._notifier.closed().await;
+                let item = occupied_entry.remove();
+                let _ = self.event_listener.send(ScadaFoundryEvent::AcseListenerReport(AcseListenerOperationalReport { id: item.id, name: item.name, host: item.host, port: item.port, status: "Deleted".into(), registrations: vec![] }));
+            }
+            Entry::Vacant(_) => (),
+        };
     }
 
     pub async fn register(&mut self, id: String, registration: AcseListenerRegistration) {
@@ -167,7 +195,10 @@ async fn acse_worker(id: String, name: String, state: Arc<RwLock<String>>, host:
                 }
             }
         }
-        tokio::time::sleep(Duration::from_secs(15 + random_range(0u64..15u64))).await;
+        select! {
+            _ = tokio::time::sleep(Duration::from_secs(15 + random_range(0u64..15u64))) => (),
+            _ = notifier.recv() => return,
+        }
     }
 }
 
@@ -192,7 +223,7 @@ async fn try_acse_worker(id: String, name: String, state: Arc<RwLock<String>>, h
     loop {
         tokio::select! {
             connection = listener.accept() => tokio::task::spawn(acse_connection_worker(connection?, registrations.clone())),
-            _ = notifier.recv() => return Ok(()),
+            _ = notifier.recv() => return Ok(())
         };
         tokio::time::sleep(Duration::from_millis(10 + random_range(0u64..5u64))).await;
     }
@@ -223,15 +254,15 @@ async fn try_acse_connection_worker(connection: TcpTpktConnection, registrations
             && let Some(ApTitle::Form2(called_ap_title)) = &acse_info.called_ap_title
             && let Some(AeQualifier::Form2(calling_ae_qualifier)) = &acse_info.calling_ae_qualifier
             && let Some(AeQualifier::Form2(called_ae_qualifier)) = &acse_info.called_ae_qualifier
-            && Some(&registration.calling.tsap) == cotp_info.calling_tsap_id()
-            && Some(&registration.calling.ssap) == cosp_info.calling_session_selector()
-            && Some(&registration.calling.psap) == copp_info.calling_presentation_selector.as_ref()
-            && &convert_object_identifiers(&registration.calling.ae_title.ap_title)? == calling_ap_title
+            && registration.calling.tsap_id.as_ref() == cotp_info.calling_tsap_id()
+            && registration.calling.session_selector.as_ref() == cosp_info.calling_session_selector()
+            && registration.calling.presentation_selector.as_ref() == copp_info.calling_presentation_selector.as_ref()
+            && &registration.calling.ae_title.ap_title == calling_ap_title
             && registration.calling.ae_title.ae_qualifier == BigInt::from_signed_bytes_be(&calling_ae_qualifier)
-            && Some(&registration.called.tsap) == cotp_info.called_tsap_id()
-            && Some(&registration.called.ssap) == cosp_info.called_session_selector()
-            && Some(&registration.called.psap) == copp_info.called_presentation_selector.as_ref()
-            && &convert_object_identifiers(&registration.called.ae_title.ap_title)? == called_ap_title
+            && registration.called.tsap_id.as_ref() == cotp_info.called_tsap_id()
+            && registration.called.session_selector.as_ref() == cosp_info.called_session_selector()
+            && registration.called.presentation_selector.as_ref() == copp_info.called_presentation_selector.as_ref()
+            && &registration.called.ae_title.ap_title == called_ap_title
             && registration.called.ae_title.ae_qualifier == BigInt::from_signed_bytes_be(&called_ae_qualifier)
         {
             let connection = accept_mms_service_server_connect::<TcpTpktReader, TcpTpktWriter>(acse_listener).await?;

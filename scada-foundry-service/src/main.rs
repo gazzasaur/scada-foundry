@@ -43,17 +43,7 @@ use tracing::{error, warn};
 use uuid::{Uuid, uuid};
 
 use crate::{
-    api::ScadaFoundryEvent::{self, AcseListenerReport, IccpAssociationUpdate, IccpDataPointUpdate},
-    config::{
-        ApplicationConfiguration,
-        acse::AcseListener,
-        iccp::{IccpDataPointSpecification, IccpDataPointType},
-    },
-    connectors::acse::{AcseListenerOperationalReport, AcseSubsystem},
-    iccp::{
-        IccpSubsystem,
-        api::{IccpAssociation, IccpDataPointName, IccpDataPointValue, IccpServerOperationalAssociation},
-    },
+    api::ScadaFoundryEvent::{self, AcseListenerReport, IccpDataPointUpdate}, config::{ApplicationConfiguration, acse::AcseListener}, connectors::{acse::{AcseListenerOperationalReport, AcseSubsystem}, iccp::{IccpServerAssocaitionOperationalReport, IccpSubsystem}}, iccp::api::{IccpAssociation, IccpServerOperationalAssociation},
 };
 
 /// SCADA Foundry Server
@@ -95,26 +85,10 @@ async fn main() -> Result<(), Error> {
 
         for acse_listener in app_config.acse.acse_listeners.iter() {
             match acse_listener {
-                config::acse::AcseListener::OsiStackAcseListener { id, name, host, port } => acse_subsystem.listen(id.clone(), name.clone(), host.clone(), *port).await,
-            }
+                AcseListener { id, name, host, port } => acse_subsystem.listen(id.clone(), name.clone(), host.clone(), *port).await,
+            };
         }
     }
-
-    {
-        let app_config = app_config.read().await;
-        let mut acse_subsystem = acse_subsystem.write().await;
-
-        acse_subsystem.listen(Uuid::new_v4().to_string(), "Default".into(), "0.0.0.0".into(), 102).await;
-        app_config.save().await?;
-    }
-
-    // app_config.write().await.iccp.data_points.push(IccpDataPointSpecification {
-    //     association_id: "123".into(),
-    //     data_point_name: IccpDataPointName::Vcc("POO".into()),
-    //     data_point_type: IccpDataPointType::RealQ { initial_value: 12.0 },
-    //     allow_write: true,
-    // });
-    // app_config.write().await.save().await?;
 
     // TODO This lazily removes queues when events occur.
     // Can also call 'closed' on all the queues to remove them immediately after they are closed.
@@ -151,6 +125,9 @@ async fn main() -> Result<(), Error> {
     let app = Router::new()
         .route("/", get(root))
         .route("/app/api/fetchacselisteners", get(fetch_acse_listeners))
+        .route("/app/api/createacselistener", post(create_acse_listener))
+        .route("/app/api/updateacselistener", post(update_acse_listener))
+        .route("/app/api/deleteacselistener", post(delete_acse_listener))
         .route("/app/api/fetchiccpassociations", get(fetch_iccp_associations))
         .route("/app/api/createiccpassociation", post(create_iccp_association))
         // .route("/app/api/fetchiccpdatapoints", get(fetch_iccp_data_points))
@@ -172,52 +149,147 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-enum WebServiceResult {
-    Success(String),
-    BadRequest(String),
-    InternalError(String),
+enum WebServiceResult<T> {
+    Success(T),
+    BadRequest,
+    InternalError,
 }
 
-impl From<WebServiceResult> for (StatusCode, String) {
-    fn from(value: WebServiceResult) -> Self {
+impl<T> WebServiceResult<T> {
+    pub fn success(value: T) -> Self {
+        WebServiceResult::Success(value)
+    }
+
+    pub fn bad_reqeust(message: String) -> Self {
+        error!(message);
+        WebServiceResult::BadRequest
+    }
+
+    pub fn internal_error(message: String) -> Self {
+        error!(message);
+        WebServiceResult::InternalError
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityIdentifier {
+    pub id: String,
+}
+
+impl<T> From<WebServiceResult<T>> for Result<T, StatusCode> {
+    fn from(value: WebServiceResult<T>) -> Self {
         match value {
-            WebServiceResult::Success(x) => (StatusCode::OK, x),
-            WebServiceResult::BadRequest(x) => (StatusCode::BAD_REQUEST, x),
-            WebServiceResult::InternalError(x) => (StatusCode::INTERNAL_SERVER_ERROR, x),
+            WebServiceResult::Success(x) => Ok(x),
+            WebServiceResult::BadRequest => Err(StatusCode::BAD_REQUEST),
+            WebServiceResult::InternalError => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 }
 
-impl From<WebServiceResult> for StatusCode {
-    fn from(value: WebServiceResult) -> Self {
-        match value {
-            WebServiceResult::Success(_) => StatusCode::OK,
-            WebServiceResult::BadRequest(_) => StatusCode::BAD_REQUEST,
-            WebServiceResult::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+async fn fetch_acse_listeners(State(context): State<WebAppContext>) -> Result<Json<Vec<AcseListenerOperationalReport>>, StatusCode> {
+    Ok(Json(context.acse_subsystem.read().await.list_listeners().await))
+}
+
+async fn create_acse_listener(State(context): State<WebAppContext>, Json(payload): Json<AcseListener>) -> Result<Json<AcseListenerOperationalReport>, StatusCode> {
+    let listener: AcseListener = match payload.try_into() {
+        Ok(x) => x,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    return try_create_acse_listener(context, listener).await.into();
+}
+
+async fn try_create_acse_listener(context: WebAppContext, listener: AcseListener) -> WebServiceResult<Json<AcseListenerOperationalReport>> {
+    let mut config = context.config.write().await;
+
+    let id = loop {
+        let id = Uuid::new_v4().to_string();
+        if let None = config.acse.acse_listeners.iter().find(|x| x.id == id) {
+            break id;
         }
+    };
+
+    config.acse.acse_listeners.push(AcseListener { id: id.clone(), name: listener.name.clone(), host: listener.host.clone(), port: listener.port });
+    if let Err(e) = config.save().await {
+        return WebServiceResult::internal_error(format!("{e:?}"));
     }
+
+    // Grab the next lock before freeing the previous one.
+    let mut subsystem = context.acse_subsystem.write().await;
+    drop(config);
+
+    let record = subsystem.listen(id, listener.name, listener.host, listener.port).await;
+    WebServiceResult::Success(Json(record))
 }
 
-async fn fetch_acse_listeners(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<AcseListenerOperationalReport>>) {
-    (StatusCode::OK, Json(context.acse_subsystem.read().await.list_listeners().await))
+async fn update_acse_listener(State(context): State<WebAppContext>, Json(payload): Json<AcseListener>) -> Result<Json<AcseListenerOperationalReport>, StatusCode> {
+    let listener: AcseListener = match payload.try_into() {
+        Ok(x) => x,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    return try_update_acse_listener(context, listener).await.into();
 }
 
-async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerOperationalAssociation>>) {
+async fn try_update_acse_listener(context: WebAppContext, listener: AcseListener) -> WebServiceResult<Json<AcseListenerOperationalReport>> {
+    let mut config = context.config.write().await;
+
+    config.acse.acse_listeners.as_mut_slice().iter_mut().find(|x| x.id == listener.id).iter_mut().for_each(|x| {
+        x.name = listener.name.clone();
+        x.host = listener.host.clone();
+        x.port = listener.port;
+    });
+    if let Err(e) = config.save().await {
+        return WebServiceResult::internal_error(format!("{e:?}"));
+    }
+
+    // Grab the next lock before freeing the previous one.
+    let mut subsystem = context.acse_subsystem.write().await;
+    drop(config);
+
+    let record = subsystem.listen(listener.id, listener.name, listener.host, listener.port).await;
+    WebServiceResult::Success(Json(record))
+}
+
+async fn delete_acse_listener(State(context): State<WebAppContext>, Json(payload): Json<EntityIdentifier>) -> Result<(), StatusCode> {
+    let listener: EntityIdentifier = match payload.try_into() {
+        Ok(x) => x,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    try_delete_acse_listener(context, listener.id).await
+}
+
+async fn try_delete_acse_listener(context: WebAppContext, listener_id: String) -> Result<(), StatusCode> {
+    let mut config = context.config.write().await;
+
+    config.acse.acse_listeners = config.acse.acse_listeners.drain(..).filter(|x| x.id != listener_id).collect();
+    if let Err(e) = config.save().await {
+        return WebServiceResult::internal_error(format!("{e:?}")).into();
+    }
+
+    // Grab the next lock before freeing the previous one.
+    let mut subsystem = context.acse_subsystem.write().await;
+    drop(config);
+
+    subsystem.close(listener_id).await;
+    Ok(())
+}
+
+async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerAssocaitionOperationalReport>>) {
     (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_server_associations().await))
 }
 
-async fn create_iccp_association(State(state): State<WebAppContext>, Json(payload): Json<IccpAssociation>) -> (StatusCode, String) {
+async fn create_iccp_association(State(state): State<WebAppContext>, Json(payload): Json<IccpAssociation>) -> Result<Json<String>, StatusCode> {
     let association: IccpAssociation = match payload.try_into() {
         Ok(association) => association,
-        Err(_) => return WebServiceResult::InternalError("An error occurred that should not be possible.".into()).into(),
+        Err(_) => return WebServiceResult::internal_error("An error occurred that should not be possible.".into()).into(),
     };
     return try_create_iccp_association(state, association).await.into();
 }
 
-async fn try_create_iccp_association(state: WebAppContext, mut association: IccpAssociation) -> WebServiceResult {
+async fn try_create_iccp_association(state: WebAppContext, mut association: IccpAssociation) -> WebServiceResult<Json<String>> {
     let mut config = state.config.write().await;
     if let Some(_) = config.iccp.associations.iter().find(|x| x.name == association.name) {
-        return WebServiceResult::BadRequest("An association with the given name already exists".into());
+        return WebServiceResult::bad_reqeust("An association with the given name already exists".into());
     }
 
     let id = loop {
@@ -231,12 +303,12 @@ async fn try_create_iccp_association(state: WebAppContext, mut association: Iccp
 
     if let Err(e) = config.save().await {
         error!("{e}");
-        return WebServiceResult::InternalError("Failed to store association".into());
+        return WebServiceResult::internal_error("Failed to store association".into());
     };
     drop(config);
 
-    state.iccp_subsystem.write().await.register_server_association(association).await;
-    WebServiceResult::Success(id)
+    state.iccp_subsystem.write().await.create_server_association(id.clone(), association.name, association.remote_data_center_parameters, association.local_data_center_parameters).await;
+    WebServiceResult::success(Json(id))
 }
 
 // async fn fetch_iccp_data_points(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpDataPointValue>>) {
@@ -251,69 +323,6 @@ pub struct WebServiceIccpDataPointSpecification {
     pub data_point_type: String,
     pub data_point_domain: Option<String>,
 }
-
-// async fn create_iccp_data_point(State(state): State<WebAppContext>, Json(payload): Json<WebServiceIccpDataPointSpecification>) -> (StatusCode, String) {
-//     let data_point: WebServiceIccpDataPointSpecification = match payload.try_into() {
-//         Ok(data_point) => data_point,
-//         Err(_) => return WebServiceResult::InternalError("An error occurred that should not be possible.".into()).into(),
-//     };
-//     return try_create_iccp_data_point(state, data_point).await.into();
-// }
-
-// async fn try_create_iccp_data_point(state: WebAppContext, web_service_data_point: WebServiceIccpDataPointSpecification) -> WebServiceResult {
-//     let data_point = IccpDataPointSpecification {
-//         association_id: web_service_data_point.association_id,
-//         data_point_name: match web_service_data_point.data_point_domain {
-//             Some(domain) if domain.len() > 0 => IccpDataPointName::Icc { domain, name: web_service_data_point.data_point_name },
-//             _ => IccpDataPointName::Vcc { name: web_service_data_point.data_point_name },
-//         },
-//         data_point_type: match web_service_data_point.data_point_type.as_str() {
-//             "RealQ" => IccpDataPointType::RealQ { initial_value: 0.0 },
-//             _ => return WebServiceResult::BadRequest(format!("Unsupported type: {}", web_service_data_point.data_point_type)),
-//         },
-//         allow_write: true,
-//     };
-
-//     let mut config = state.config.write().await;
-//     if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
-//         return WebServiceResult::BadRequest("An association for the requested data point was not found".into());
-//     }
-
-//     if let None = config.iccp.associations.iter().find(|x| x.id == data_point.association_id) {
-//         error!("The association does not exist: {}", data_point.association_id);
-//         return WebServiceResult::BadRequest("Failed to store association".into());
-//     }
-//     for existing_point in config.iccp.data_points.iter() {
-//         if existing_point.association_id == data_point.association_id && existing_point.data_point_name == data_point.data_point_name {
-//             error!("The data point already exists on association: {}", existing_point.association_id);
-//             return WebServiceResult::BadRequest("Failed to store association".into());
-//         }
-//     }
-//     config.iccp.data_points.push(data_point.clone());
-
-//     if let Err(e) = config.save().await {
-//         error!("{e}");
-//         return WebServiceResult::InternalError("Failed to store association".into());
-//     };
-//     drop(config);
-
-//     state
-//         .iccp_subsystem
-//         .write()
-//         .await
-//         .create_data_point(IccpDataPointValue {
-//             association_id: data_point.association_id,
-//             data_point_name: data_point.data_point_name,
-//             value: (&data_point.data_point_type).into(),
-//             allow_write: data_point.allow_write,
-//             recorded: 0,
-//             source: "Initial".into(),
-//             updated: 0,
-//             timestamp: None,
-//         })
-//         .await;
-//     WebServiceResult::Success("".into())
-// }
 
 async fn ws_handler(ws: WebSocketUpgrade, user_agent: Option<TypedHeader<headers::UserAgent>>, ConnectInfo(addr): ConnectInfo<SocketAddr>, State(context): State<WebAppContext>) -> impl IntoResponse {
     // Finalize the upgrade handshake
@@ -364,15 +373,8 @@ async fn handle_socket(mut socket: WebSocket, context: WebAppContext) {
                             socket.send(Message::Text(serde_json::to_string_pretty(&data).unwrap().into())).await.unwrap()
                         },
 
-                        IccpAssociationUpdate(iccp_association_state) => {
-                            warn!("{iccp_association_state:?}");
-                            let data = IccpAssociationStateMessage {
-                                kind: "IccpAssociationStateMessage".into(),
-                                data: iccp_association_state,
-                            };
-                            socket.send(Message::Text(serde_json::to_string_pretty(&data).unwrap().into())).await.unwrap()
-                        },
                         IccpDataPointUpdate(_iccp_data_point_value) => (),
+                        ScadaFoundryEvent::IccpServerAssociationReport(iccp_assocaition_operational_report) => todo!(),
                     }
                 },
                 None => return,

@@ -1,11 +1,15 @@
-use crate::{connectors::acse::AcseListenerOperationalReport, iccp::api::{IccpDataPointValue, IccpServerOperationalAssociation}};
+use crate::{
+    connectors::{acse::AcseListenerOperationalReport, iccp::IccpServerAssocaitionOperationalReport}, iccp::api::IccpDataPointValue,
+};
 
 #[derive(Clone)]
 pub enum ScadaFoundryEvent {
     AcseListenerReport(AcseListenerOperationalReport),
 
-    IccpAssociationUpdate(IccpServerOperationalAssociation),
+    // IccpAssociationUpdate(IccpServerOperationalAssociation),
     IccpDataPointUpdate(IccpDataPointValue),
+
+    IccpServerAssociationReport(IccpServerAssocaitionOperationalReport),
 }
 
 pub struct AcseControlCentre {
@@ -18,4 +22,3 @@ pub struct AcseProtocolInformation {
     pub called: AcseControlCentre,
     pub calling: AcseControlCentre,
 }
-
