@@ -1,14 +1,16 @@
 <script lang="ts">
 	import { getApplicationContext, type ApplicationContext } from '$lib/contexts/ApplicationContext';
 	import { A, Alert, Button, Card, Heading, Hr, Modal, P, Progressradial, Spinner, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-	import { PenOutline, PlusOutline } from 'flowbite-svelte-icons';
+	import { PenOutline, PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
 	import type { AcseListener, AcseListenerReport, IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
 	import NewAcseListener from './EditAcseListener.svelte';
 	import EditAcseListener from './EditAcseListener.svelte';
+	import DeleteAcseListener from './DeleteAcseListener.svelte';
 
 	let editAcseListener = $state(false);
+	let deleteAcseListener = $state(false);
 	let editAcseListenerValue = $state<undefined | AcseListener>(undefined);
 	let editedAcseListener = $state({ id: '', name: '', hoost: '', port: 0 });
 
@@ -29,15 +31,23 @@
 	<TableBody>
 		{#each acseListeners as acseListener}
 			<TableBodyRow>
-				<TableBodyCell class="w-0.5"
-					><PenOutline
-						class="cursor-pointer"
-						onclick={() => {
-							editAcseListenerValue = acseListener;
-							editAcseListener = true;
-						}}
-					/></TableBodyCell
-				>
+				<TableBodyCell class="w-1">
+					{#if acseListener.status != 'Deleted'}
+						<PenOutline
+							class="inline cursor-pointer pr-0.5"
+							onclick={() => {
+								editAcseListenerValue = { ...acseListener };
+								editAcseListener = true;
+							}}
+						/><TrashBinOutline
+							class="inline cursor-pointer pl-0.5"
+							onclick={() => {
+								editAcseListenerValue = { ...acseListener };
+								deleteAcseListener = true;
+							}}
+						/>
+					{/if}
+				</TableBodyCell>
 				<TableBodyCell>{acseListener.name}</TableBodyCell>
 				<TableBodyCell>{acseListener.host}</TableBodyCell>
 				<TableBodyCell>{acseListener.port}</TableBodyCell>
@@ -63,4 +73,5 @@
 	</TableBody>
 </Table>
 
-<EditAcseListener bind:open={editAcseListener} initialValue={editAcseListenerValue} onsuccess={() => {}}></EditAcseListener>
+<EditAcseListener bind:open={editAcseListener} existing={editAcseListenerValue} onsuccess={() => {}}></EditAcseListener>
+<DeleteAcseListener bind:open={deleteAcseListener} existing={editAcseListenerValue}></DeleteAcseListener>

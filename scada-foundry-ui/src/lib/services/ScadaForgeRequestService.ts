@@ -33,7 +33,7 @@ export interface AcseListener {
 	port: number;
 }
 
-export interface AcseListenerRegistration { }
+export interface AcseListenerRegistration {}
 
 export interface AcseListenerReport {
 	id: string;
@@ -58,7 +58,7 @@ export interface IccpDataPoint {
 }
 
 export class ScadaForgeRequestService {
-	constructor(private url: string) { }
+	constructor(private url: string) {}
 
 	public async fetchAcseListeners(): Promise<Array<AcseListenerReport>> {
 		return this.fromJson(await (await fetch(`${this.url}/fetchacselisteners`)).text()) as Array<AcseListenerReport>;
@@ -69,7 +69,11 @@ export class ScadaForgeRequestService {
 	}
 
 	public async updateAcseListener(listener: AcseListener): Promise<AcseListenerReport> {
-		return (await this.postWithResult(`${this.url}/createacselistener`, listener)) as AcseListenerReport;
+		return (await this.postWithResult(`${this.url}/updateacselistener`, listener)) as AcseListenerReport;
+	}
+
+	public async deleteAcseListener(id: string): Promise<void> {
+		return await this.postWithoutResult(`${this.url}/deleteacselistener`, { id: id });
 	}
 
 	public async fetchIccpAssociations(): Promise<Array<IccpAssociationState>> {
@@ -113,14 +117,24 @@ export class ScadaForgeRequestService {
 		).text();
 	}
 
+	private async postWithoutResult(url: string, data: any): Promise<void> {
+		await fetch(url, {
+			method: 'POST',
+			headers: { 'Content-type': 'application/json' },
+			body: this.toJson(data)
+		});
+	}
+
 	private async postWithResult(url: string, data: any): Promise<any> {
-		return this.fromJson(await (
-			await fetch(url, {
-				method: 'POST',
-				headers: { 'Content-type': 'application/json' },
-				body: this.toJson(data)
-			})
-		).text());
+		return this.fromJson(
+			await (
+				await fetch(url, {
+					method: 'POST',
+					headers: { 'Content-type': 'application/json' },
+					body: this.toJson(data)
+				})
+			).text()
+		);
 	}
 
 	private toJson(data: any): string {

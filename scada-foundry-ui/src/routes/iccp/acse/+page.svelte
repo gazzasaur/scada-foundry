@@ -18,11 +18,13 @@
 	let listenerId = '';
 	let itemsBacklog = [];
 
-	function updateAcseListenerReport(original: AcseListenerReport, report: AcseListenerReport) {
-		let existingReport = acseListeners.find((x) => (x.id = report.id));
+	function updateAcseListenerReport(report: AcseListenerReport, override: boolean) {
+		let existingReport = acseListeners.find((x) => (x.id == report.id));
 
-		if (!!existingReport && deepEqual(original, existingReport)) {
+		if (!!existingReport && override) {
 			Object.assign(existingReport, report);
+		} else if (!!existingReport) {
+			// Do nothing
 		} else {
 			acseListeners.push(report);
 		}
@@ -34,12 +36,12 @@
 			if (message.kind != 'AcseListenerReportMessage') {
 				return;
 			}
-			updateAcseListenerReport(message.data);
+			updateAcseListenerReport(message.data, true);
 		});
 
 		try {
 			for (let report of await applicationContext.getScadaForgeRequestService().fetchAcseListeners()) {
-				updateAcseListenerReport(report);
+				updateAcseListenerReport(report, false);
 			}
 			loading = false;
 		} catch (e) {
