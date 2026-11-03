@@ -5,7 +5,7 @@
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import NewCallingAssociation from './NewCallingAssociation.svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
+	import type { IccpAssociation, IccpAssociationReport } from '$lib/services/ScadaForgeRequestService';
 	import NewCalledAssociation from './NewCalledAssociation.svelte';
 
 	let newTaseCalled = $state(false);

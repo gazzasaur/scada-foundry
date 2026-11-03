@@ -4,7 +4,7 @@
 	import { PlusOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { AcseListenerReport, IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
+	import type { AcseListenerReport, IccpAssociation, IccpAssociationReport } from '$lib/services/ScadaForgeRequestService';
 	import EditAcseListener from './EditAcseListener.svelte';
 	import AcseListenerTable from './AcseListenerTable.svelte';
 	import { deepEqual } from 'fast-equals';

@@ -8,6 +8,8 @@ pub mod iccp;
 mod model;
 pub mod webservice;
 
+use der_parser::oid;
+use num_bigint::BigInt;
 use std::{
     collections::{HashMap, VecDeque, hash_map::Entry},
     net::SocketAddr,
@@ -43,7 +45,16 @@ use tracing::{error, warn};
 use uuid::{Uuid, uuid};
 
 use crate::{
-    api::ScadaFoundryEvent::{self, AcseListenerReport, IccpDataPointUpdate}, config::{ApplicationConfiguration, acse::AcseListener}, connectors::{acse::{AcseListenerOperationalReport, AcseSubsystem}, iccp::{IccpServerAssocaitionOperationalReport, IccpSubsystem}}, iccp::api::{IccpAssociation, IccpServerOperationalAssociation},
+    api::ScadaFoundryEvent::{self, AcseListenerReport, IccpDataPointUpdate},
+    config::{
+        ApplicationConfiguration,
+        acse::{AcseAeTitle, AcseIdentityParameters, AcseListener},
+    },
+    connectors::{
+        acse::{AcseListenerOperationalReport, AcseListenerRegistration, AcseSubsystem},
+        iccp::{IccpServerAssociationOperationalReport, IccpSubsystem},
+    },
+    iccp::api::{IccpAssociation, IccpServerOperationalAssociation},
 };
 
 /// SCADA Foundry Server
@@ -87,6 +98,16 @@ async fn main() -> Result<(), Error> {
             match acse_listener {
                 AcseListener { id, name, host, port } => acse_subsystem.listen(id.clone(), name.clone(), host.clone(), *port).await,
             };
+        }
+    }
+    {
+        let app_config = app_config.read().await;
+        let mut iccp_subsystem = iccp_subsystem.write().await;
+        let mut acse_subsystem = acse_subsystem.write().await;
+
+        for assocation in app_config.iccp.associations.iter() {
+            iccp_subsystem.create_server_association(assocation.clone()).await;
+            acse_subsystem.register(id, AcseListenerRegistration { id: assocation.id.clone(), name: assocation.name.clone(), subsystem_name: "iccp".into(), listener: todo!(), called: todo!(), calling: todo!() })
         }
     }
 
@@ -274,7 +295,7 @@ async fn try_delete_acse_listener(context: WebAppContext, listener_id: String) -
     Ok(())
 }
 
-async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerAssocaitionOperationalReport>>) {
+async fn fetch_iccp_associations(State(context): State<WebAppContext>) -> (StatusCode, Json<Vec<IccpServerAssociationOperationalReport>>) {
     (StatusCode::OK, Json(context.iccp_subsystem.read().await.list_server_associations().await))
 }
 
@@ -307,7 +328,7 @@ async fn try_create_iccp_association(state: WebAppContext, mut association: Iccp
     };
     drop(config);
 
-    state.iccp_subsystem.write().await.create_server_association(id.clone(), association.name, association.remote_data_center_parameters, association.local_data_center_parameters).await;
+    state.iccp_subsystem.write().await.create_server_association(association).await;
     WebServiceResult::success(Json(id))
 }
 

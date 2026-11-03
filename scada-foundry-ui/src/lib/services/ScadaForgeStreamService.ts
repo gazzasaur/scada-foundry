@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { AcseListenerReport, IccpAssociation, IccpAssociationState } from './ScadaForgeRequestService';
+import type { AcseListenerReport, IccpAssociation, IccpAssociationReport } from './ScadaForgeRequestService';
 
 export interface ScadaForgeStatus {
     kind: 'ScadaForgeStatus',
@@ -14,7 +14,7 @@ export interface AcseListenerReportMessage {
 
 export interface IccpAssociationStateMessage {
     kind: 'IccpAssociationStateMessage',
-    data: IccpAssociationState,
+    data: IccpAssociationReport,
 }
 
 export type ScadaForgeStreamServiceMessage = ScadaForgeStatus | IccpAssociationStateMessage | AcseListenerReportMessage;

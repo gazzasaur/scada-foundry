@@ -4,7 +4,7 @@
 	import { PlusOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { IccpAssociation, IccpAssociationState, IccpDataPoint } from '$lib/services/ScadaForgeRequestService';
+	import type { IccpAssociation, IccpAssociationReport, IccpDataPoint } from '$lib/services/ScadaForgeRequestService';
 
 	let applicationContext = getApplicationContext();
 

@@ -3,21 +3,155 @@
   "acse": {
     "acseListeners": [
       {
-        "id": "21e68aba-ef96-4688-a134-d213832987e3",
-        "name": "Gsx",
+        "id": "0b4f73e9-a945-4214-bb2d-4bd6a4fda2ca",
+        "name": "Mine1",
         "host": "0.0.0.0",
-        "port": 9102
-      },
-      {
-        "id": "b809e3f4-9414-4dbd-8823-b9f1752f5e17",
-        "name": "Gaz",
-        "host": "0.0.0.0",
-        "port": 8102
+        "port": 10002
       }
     ]
   },
   "iccp": {
-    "associations": [],
+    "associations": [
+      {
+        "id": "123453",
+        "name": "one2",
+        "enabled": true,
+        "version": "2000.08",
+
+        "localDomain": "ld",
+        "remoteDomain": "rd",
+        "localBilateralTable": "lbt",
+        "remoteBilateralTable": "rbt",
+        "source": {
+          "called": {
+            "listener": {
+              "id": "123-4-55-234",
+              "name": "123-4-55-234"
+            }
+          }
+        },
+        "localDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        },
+        "remoteDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        }
+      },
+      {
+        "id": "123454",
+        "name": "one",
+        "enabled": true,
+        "version": "2000.08",
+        "localDomain": "ld",
+        "remoteDomain": "rd",
+        "localBilateralTable": "lbt",
+        "remoteBilateralTable": "rbt",
+        "source": {
+          "calling": {
+            "host": "127.0.0.1",
+            "port": 8102
+          }
+        },
+        "localDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        },
+        "remoteDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        }
+      },
+      {
+        "id": "123456",
+        "name": "one",
+        "enabled": true,
+        "version": "2000.08",
+        "localDomain": "ld",
+        "remoteDomain": "rd",
+        "localBilateralTable": "lbt",
+        "remoteBilateralTable": "rbt",
+        "source": {
+          "calling": {
+            "host": "127.0.0.1",
+            "port": 8102
+          }
+        },
+        "localDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        },
+        "remoteDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        }
+      },
+      {
+        "id": "123457",
+        "name": "one",
+        "enabled": true,
+        "version": "2000.08",
+        "localDomain": "ld",
+        "remoteDomain": "rd",
+        "localBilateralTable": "lbt",
+        "remoteBilateralTable": "rbt",
+        "source": {
+          "calling": {
+            "host": "127.0.0.1",
+            "port": 8102
+          }
+        },
+        "localDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        },
+        "remoteDataCenterParameters": {
+          "tsapId": "00",
+          "sessionSelector": "00",
+          "presentationSelector": "00",
+          "aeTitle": {
+            "apTitle": "1.2.3.4",
+            "aeQualifier": 1
+          }
+        }
+      }
+    ],
     "dataPoints": [],
     "transferSets": []
   }

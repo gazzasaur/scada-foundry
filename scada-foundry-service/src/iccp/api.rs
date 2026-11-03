@@ -31,11 +31,22 @@ pub struct IccpDataPointValue {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub enum IccpAssociationType {
-    ClientUnidirectional,
-    ServerUnidirectional,
-    ClientBidirectional,
-    ServerBidirectional,
+pub struct IccpAssociationListener {
+    id: String,
+    name: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum IccpAssociationSource {
+    Calling {
+        host: String,
+        port: u16,
+    },
+    Called {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        listener: Option<IccpAssociationListener>,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -43,10 +54,15 @@ pub enum IccpAssociationType {
 pub struct IccpAssociation {
     pub id: String,
     pub name: String,
-    pub association_type: IccpAssociationType,
+    pub enabled: bool,
+    pub version: String,
 
-    pub domain: String,
-    pub bilateral_table: String,
+    pub local_domain: String,
+    pub remote_domain: String,
+    pub local_bilateral_table: String,
+    pub remote_bilateral_table: String,
+
+    pub source: IccpAssociationSource,
 
     pub local_data_center_parameters: AcseIdentityParameters,
     pub remote_data_center_parameters: AcseIdentityParameters,

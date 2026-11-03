@@ -16,21 +16,19 @@ use tokio::{
 };
 use tracing::error;
 
-use crate::{api::ScadaFoundryEvent, config::acse::AcseIdentityParameters};
+use crate::{
+    api::ScadaFoundryEvent,
+    config::acse::AcseIdentityParameters,
+    iccp::api::IccpAssociation,
+};
 
 pub type EventQueue = UnboundedSender<ScadaFoundryEvent>;
 pub type ConnectionQueue = UnboundedSender<Box<dyn RustyMmsServiceServer>>;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct IccpServerAssocaitionOperationalReport {
-    pub id: String,
-    pub name: String,
-    pub acse_listener: Option<String>,
-
-    pub calling: AcseIdentityParameters,
-    pub called: AcseIdentityParameters,
-
+pub struct IccpServerAssociationOperationalReport {
+    pub association: IccpAssociation,
     pub status: String,
 }
 
@@ -64,57 +62,46 @@ impl IccpSubsystem {
         return Self { associations: Arc::new(RwLock::new(HashMap::new())), event_listener };
     }
 
-    pub async fn list_server_associations(&self) -> Vec<IccpServerAssocaitionOperationalReport> {
+    pub async fn list_server_associations(&self) -> Vec<IccpServerAssociationOperationalReport> {
         let mut reports = vec![];
         for association in self.associations.read().await.values() {
-            reports.push(IccpServerAssocaitionOperationalReport {
-                id: association.id.clone(),
-                name: association.name.clone(),
-                status: association.status.read().await.clone(),
-                calling: association.calling.clone(),
-                called: association.called.clone(),
-                acse_listener: None,
-            });
+            reports.push(IccpServerAssociationOperationalReport { status: association.status.read().await.clone(), association: association.association.clone() });
         }
         reports
     }
 
-    pub async fn create_server_association(&mut self, id: String, name: String, calling: AcseIdentityParameters, called: AcseIdentityParameters) -> IccpServerAssocaitionOperationalReport {
+    pub async fn create_server_association(&mut self, assocation: IccpAssociation) -> IccpServerAssociationOperationalReport {
         let mut associations = self.associations.write().await;
 
-        return match associations.entry(id.clone()) {
+        return match associations.entry(assocation.id.clone()) {
             Entry::Occupied(mut occupied_entry) => {
                 let _ = occupied_entry.get()._notifier.send(());
                 occupied_entry.get()._notifier.closed().await;
 
-                let association_record = IccpServerAssocaitionOperationalReport { id: id.clone(), name: name.clone(), acse_listener: None, status: "Initialising".into(), calling: calling.clone(), called: called.clone() };
-                occupied_entry.insert(IccpAssociationManager::new(id.clone(), name.clone(), calling, called, self.event_listener.clone()));
+                let association_record = IccpServerAssociationOperationalReport { status: "Initialising".into(), association: occupied_entry.get().association.clone() };
+                occupied_entry.insert(IccpAssociationManager::new(assocation, self.event_listener.clone()));
                 association_record
             }
             Entry::Vacant(vacant_entry) => {
-                let listener_record = IccpServerAssocaitionOperationalReport { id: id.clone(), name: name.clone(), acse_listener: None, status: "Initialising".into(), calling: calling.clone(), called: called.clone() };
-                vacant_entry.insert_entry(IccpAssociationManager::new(id, name, calling, called, self.event_listener.clone()));
+                let listener_record = IccpServerAssociationOperationalReport { status: "Initialising".into(), association: assocation.clone() };
+                vacant_entry.insert_entry(IccpAssociationManager::new(assocation, self.event_listener.clone()));
                 listener_record
             }
         };
     }
 
-    pub async fn close(&mut self, id: String) {
-        let mut assocaitions = self.associations.write().await;
+    pub async fn fetch_server_association(&self) -> Vec<IccpServerAssociationOperationalReport> {
+    }
 
-        return match assocaitions.entry(id.clone()) {
+    pub async fn close(&mut self, id: String) {
+        let mut associations = self.associations.write().await;
+
+        return match associations.entry(id.clone()) {
             Entry::Occupied(occupied_entry) => {
                 let _ = occupied_entry.get()._notifier.send(());
                 occupied_entry.get()._notifier.closed().await;
                 let item = occupied_entry.remove();
-                let _ = self.event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssocaitionOperationalReport {
-                    id: item.id,
-                    name: item.name,
-                    acse_listener: None,
-                    status: "Deleted".into(),
-                    calling: item.calling,
-                    called: item.called,
-                }));
+                let _ = self.event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssociationOperationalReport { status: "Deleted".into(), association: item.association.clone() }));
             }
             Entry::Vacant(_) => (),
         };
@@ -124,22 +111,16 @@ impl IccpSubsystem {
 pub struct IccpAssociationManager {
     // This will terminate the worked if the parent goes out of scope.
     _notifier: UnboundedSender<()>,
-
-    id: String,
-    name: String,
-
-    calling: AcseIdentityParameters,
-    called: AcseIdentityParameters,
-
+    association: IccpAssociation,
     status: Arc<RwLock<String>>,
 }
 
 impl IccpAssociationManager {
-    pub fn new(id: String, name: String, calling: AcseIdentityParameters, called: AcseIdentityParameters, event_listener: EventQueue) -> Self {
+    pub fn new(association: IccpAssociation, event_listener: EventQueue) -> Self {
         let status = Arc::new(RwLock::new("Idle".into()));
         let (notifier_sender, notifier_receiver) = unbounded_channel();
-        tokio::task::spawn(iccp_worker(id.clone(), name.clone(), status.clone(), calling.clone(), called.clone(), event_listener, notifier_receiver));
-        Self { id, name, status, calling, called, _notifier: notifier_sender }
+        tokio::task::spawn(iccp_worker(association.clone(), status.clone(), event_listener, notifier_receiver));
+        Self { status, association, _notifier: notifier_sender }
     }
 
     pub async fn state(&self) -> String {
@@ -147,36 +128,22 @@ impl IccpAssociationManager {
     }
 }
 
-async fn iccp_worker(id: String, name: String, state: Arc<RwLock<String>>, calling: AcseIdentityParameters, called: AcseIdentityParameters, mut event_listener: EventQueue, mut notifier: UnboundedReceiver<()>) {
+async fn iccp_worker(association: IccpAssociation, state: Arc<RwLock<String>>, acse_receiver: &mut UnboundedReceiver<Box<dyn RustyMmsServiceServer>>, mut event_listener: EventQueue, mut notifier: UnboundedReceiver<()>) {
     loop {
         *state.write().await = "Idle".into();
         // TODO Registrations
-        match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssocaitionOperationalReport {
-            id: id.clone(),
-            name: name.clone(),
-            acse_listener: None,
-            status: "Idle".into(),
-            calling: calling.clone(),
-            called: called.clone(),
-        })) {
+        match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssociationOperationalReport { association: association.clone(), status: "Idle".into() })) {
             Ok(()) => (),
             Err(_) => return,
         }
 
-        match try_iccp_worker(id.clone(), name.clone(), state.clone(), calling.clone(), called.clone(), &mut event_listener, &mut notifier).await {
+        match try_iccp_worker(association.clone(), state.clone(), &mut event_listener, &mut notifier).await {
             Ok(()) => return,
             Err(e) => {
                 error!("{e}");
                 *state.write().await = "Error".into();
                 // TODO Registrations
-                match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssocaitionOperationalReport {
-                    id: id.clone(),
-                    name: name.clone(),
-                    acse_listener: None,
-                    status: "Error".into(),
-                    calling: calling.clone(),
-                    called: called.clone(),
-                })) {
+                match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssociationOperationalReport { association: association.clone(), status: "Error".into() })) {
                     Ok(()) => (),
                     Err(_) => return,
                 }
@@ -189,32 +156,17 @@ async fn iccp_worker(id: String, name: String, state: Arc<RwLock<String>>, calli
     }
 }
 
-async fn try_iccp_worker(
-    id: String,
-    name: String,
-    state: Arc<RwLock<String>>,
-    calling: AcseIdentityParameters,
-    called: AcseIdentityParameters,
-    event_listener: &mut EventQueue,
-    notifier: &mut UnboundedReceiver<()>,
-) -> Result<(), anyhow::Error> {
+async fn try_iccp_worker(association: IccpAssociation, state: Arc<RwLock<String>>, event_listener: &mut EventQueue, notifier: &mut UnboundedReceiver<()>) -> Result<(), anyhow::Error> {
     *state.write().await = "Opening".into();
     // TODO registrations
-    match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssocaitionOperationalReport {
-        id: id.clone(),
-        name: name.clone(),
-        acse_listener: None,
-        status: "Opening".into(),
-        calling: calling.clone(),
-        called: called.clone(),
-    })) {
+    match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssociationOperationalReport { association: association.clone(), status: "Opening".into() })) {
         Ok(()) => (),
         Err(_) => return Ok(()),
     }
 
     *state.write().await = "Listening".into();
     // TODO Registrations
-    match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssocaitionOperationalReport { id: id.clone(), name: name.clone(), acse_listener: None, status: "Listening".into(), calling, called })) {
+    match event_listener.send(ScadaFoundryEvent::IccpServerAssociationReport(IccpServerAssociationOperationalReport { association: association.clone(), status: "Listening".into() })) {
         Ok(()) => (),
         Err(_) => return Ok(()),
     }

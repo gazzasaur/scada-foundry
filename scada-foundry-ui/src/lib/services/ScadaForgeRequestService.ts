@@ -2,28 +2,48 @@ import type { IccpAssociationStateMessage } from './ScadaForgeStreamService';
 
 export type AssociationType = 'clientUnidirectional' | 'clientBidirectional' | 'serverUnidirectional' | 'serverBidirectional';
 
-export interface IccpAeTitle {
+export interface AcseAeTitle {
 	apTitle: string;
 	aeQualifier: BigInt;
 }
 
-export interface IccpDataCenterParameters {
-	aeTitle: IccpAeTitle;
-	tsap: string;
-	ssap: string;
-	psap: string;
+export interface AcseIdentityParameters {
+	tsapId?: String;
+	sessionSelector?: String;
+	presentationSelector?: String;
+	aeTitle: AcseAeTitle;
+}
+
+export interface IccpAssociationListener {
+	id: string;
+	name: string;
+}
+
+export interface IccpAssociationSource {
+	called?: {
+		listener?: IccpAssociationListener;
+	};
+	calling?: {
+		host: string;
+		port: number;
+	};
 }
 
 export interface IccpAssociation {
 	id: string;
 	name: string;
-	associationType: AssociationType;
-	domain: string;
-	bilateralTable: string;
-	host: string;
-	port: number;
-	localDataCenterParameters: IccpDataCenterParameters;
-	remoteDataCenterParameters: IccpDataCenterParameters;
+	version: string;
+	enabled: boolean;
+
+	localDomain: string;
+	remoteDomain: string;
+	localBilateralTable: string;
+	remoteBilateralTable: string;
+
+	source: IccpAssociationSource;
+
+	localDataCenterParameters: AcseIdentityParameters;
+	remoteDataCenterParameters: AcseIdentityParameters;
 }
 
 export interface AcseListener {
@@ -45,7 +65,7 @@ export interface AcseListenerReport {
 	registrations: Array<AcseListenerRegistration>;
 }
 
-export interface IccpAssociationState {
+export interface IccpAssociationReport {
 	association: IccpAssociation;
 	status: string;
 }
@@ -76,8 +96,8 @@ export class ScadaForgeRequestService {
 		return await this.postWithoutResult(`${this.url}/deleteacselistener`, { id: id });
 	}
 
-	public async fetchIccpAssociations(): Promise<Array<IccpAssociationState>> {
-		return this.fromJson(await (await fetch(`${this.url}/fetchiccpassociations`)).text()) as Array<IccpAssociationState>;
+	public async fetchIccpAssociations(): Promise<Array<IccpAssociationReport>> {
+		return this.fromJson(await (await fetch(`${this.url}/fetchiccpassociations`)).text()) as Array<IccpAssociationReport>;
 	}
 
 	public async fetchIccpDatapoints(): Promise<Array<IccpAssociation>> {

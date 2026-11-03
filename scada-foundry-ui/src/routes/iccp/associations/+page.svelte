@@ -5,7 +5,7 @@
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import NewCallingAssociation from './NewCallingAssociation.svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
+	import type { IccpAssociation, IccpAssociationReport } from '$lib/services/ScadaForgeRequestService';
 	import NewCalledAssociation from './NewCalledAssociation.svelte';
 	import CalledAssociationsTable from './CalledAssociationsTable.svelte';
 	import CallingAssociationsTable from './CallingAssociationsTable.svelte';
@@ -15,40 +15,78 @@
 	let applicationContext = getApplicationContext();
 
 	let loading = $state(true);
-	let associations = $state<Array<IccpAssociationState>>([]);
-	let clientAssociations = $derived(associations.filter((state) => ['clientUnidirectional', 'clientBidirectional'].includes(state.association.associationType)));
-	let serverAssociations = $derived(associations.filter((state) => ['serverUnidirectional', 'serverBidirectional'].includes(state.association.associationType)));
+	let associations = $state<Array<IccpAssociationReport>>([]);
+	let clientAssociations = $derived(associations.filter((state) => Object.keys(state.association.source).includes('calling')));
+	let serverAssociations = $derived(associations.filter((state) => Object.keys(state.association.source).includes('called')));
 
 	let listenerId = '';
 	let itemsBacklog = [];
 
+	function updateIccpAssociationReport(report: IccpAssociationReport, override: boolean) {
+		let existingReport = associations.find((x) => (x.association.id == report.association.id));
+
+		if (!!existingReport && override) {
+			Object.assign(existingReport, report);
+		} else if (!!existingReport) {
+			// Do nothing
+		} else {
+			associations.push(report);
+		}
+	}
+
 	// TODO This may cause out of order updates. Need to process websocket events after fetch.
 	onMount(async () => {
-		listenerId = applicationContext.getScadaForgeStreamService().addListener((message) => {
-			if (message.kind != 'IccpAssociationStateMessage') {
-				return;
-			}
-			let association = associations.find((state) => state.association.id == message.data.association.id);
-			if (!association) {
-				associations.push(message.data);
-			} else {
-				Object.assign(association, { ...message.data });
-			}
-		});
+		// listenerId = applicationContext.getScadaForgeStreamService().addListener((message) => {
+		// 	if (message.kind != 'IccpAssociationReportMessage') {
+		// 		return;
+		// 	}
+		// 	updateIccpAssociationReport(message.data, true);
+		// });
 
 		try {
-			associations = await applicationContext.getScadaForgeRequestService().fetchIccpAssociations();
+			for (let report of await applicationContext.getScadaForgeRequestService().fetchIccpAssociations()) {
+				console.log(report);
+				updateIccpAssociationReport(report, false);
+			}
 			loading = false;
 		} catch (e) {
 			console.log(e);
 		}
 	});
 
-	onDestroy(async () => {
-		if (!!listenerId) {
-			applicationContext.getScadaForgeStreamService().removeListener(listenerId);
-		}
-	});
+	// onDestroy(async () => {
+	// 	if (!!listenerId) {
+	// 		applicationContext.getScadaForgeStreamService().removeListener(listenerId);
+	// 	}
+	// });
+
+	// // TODO This may cause out of order updates. Need to process websocket events after fetch.
+	// onMount(async () => {
+	// 	listenerId = applicationContext.getScadaForgeStreamService().addListener((message) => {
+	// 		if (message.kind != 'IccpAssociationStateMessage') {
+	// 			return;
+	// 		}
+	// 		let association = associations.find((state) => state.association.id == message.data.association.id);
+	// 		if (!association) {
+	// 			associations.push(message.data);
+	// 		} else {
+	// 			Object.assign(association, { ...message.data });
+	// 		}
+	// 	});
+
+	// 	try {
+	// 		associations = await applicationContext.getScadaForgeRequestService().fetchIccpAssociations();
+	// 		loading = false;
+	// 	} catch (e) {
+	// 		console.log(e);
+	// 	}
+	// });
+
+	// onDestroy(async () => {
+	// 	if (!!listenerId) {
+	// 		applicationContext.getScadaForgeStreamService().removeListener(listenerId);
+	// 	}
+	// });
 </script>
 
 <div class="p-10">
@@ -63,14 +101,14 @@
 				<Heading tag="h3">Calling Associations</Heading>
 				<Button color="blue" onclick={() => (newTaseCalling = true)}>Create</Button>
 			</div>
-			<CallingAssociationsTable loading clientAssociations></CallingAssociationsTable>
+			<CallingAssociationsTable {loading} {clientAssociations}></CallingAssociationsTable>
 		</TabItem>
 		<TabItem title="Called">
 			<div class="mb-2 flex justify-between">
 				<Heading tag="h3">Called Associations</Heading>
 				<Button color="blue" onclick={() => (newTaseCalled = true)}>Create</Button>
 			</div>
-			<CalledAssociationsTable loading serverAssociations></CalledAssociationsTable>
+			<CalledAssociationsTable {loading} {serverAssociations}></CalledAssociationsTable>
 		</TabItem>
 	</Tabs>
 </div>

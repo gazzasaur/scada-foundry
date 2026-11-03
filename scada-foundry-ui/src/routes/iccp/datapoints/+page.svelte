@@ -4,7 +4,7 @@
 	import { PlusOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { IccpAssociation, IccpAssociationState, IccpDataPoint } from '$lib/services/ScadaForgeRequestService';
+	import type { IccpAssociation, IccpAssociationReport, IccpDataPoint } from '$lib/services/ScadaForgeRequestService';
 	import NewClientDataPoint from './NewClientDataPoint.svelte';
 
 	let newTaseCalled = $state(false);
@@ -13,7 +13,7 @@
 
 	let loading = $state(true);
 	let dataPoints = $state<Array<IccpDataPoint>>([]);
-	let associations = $state<Array<IccpAssociationState>>([]);
+	let associations = $state<Array<IccpAssociationReport>>([]);
 
 	let clientAssociations = $derived(associations.filter((state) => ['clientUnidirectional', 'clientBidirectional'].includes(state.association.associationType)));
 	let serverAssociations = $derived(associations.filter((state) => ['serverUnidirectional', 'serverBidirectional'].includes(state.association.associationType)));

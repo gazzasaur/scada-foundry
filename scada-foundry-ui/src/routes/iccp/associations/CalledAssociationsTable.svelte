@@ -1,62 +1,78 @@
 <script lang="ts">
 	import { getApplicationContext, type ApplicationContext } from '$lib/contexts/ApplicationContext';
 	import { A, Alert, Button, Card, Heading, Hr, Modal, P, Progressradial, Spinner, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-	import { PlusOutline } from 'flowbite-svelte-icons';
+	import { PenOutline, PlusOutline, TrashBinOutline } from 'flowbite-svelte-icons';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import NewCallingAssociation from './NewCallingAssociation.svelte';
 	import { Tabs, TabItem } from 'flowbite-svelte';
-	import type { IccpAssociation, IccpAssociationState } from '$lib/services/ScadaForgeRequestService';
+	import type { IccpAssociation, IccpAssociationReport } from '$lib/services/ScadaForgeRequestService';
 	import NewCalledAssociation from './NewCalledAssociation.svelte';
 
 	let newTaseCalled = $state(false);
 	let newTaseCalling = $state(false);
 	let applicationContext = getApplicationContext();
 
-	let { loading, serverAssociations } = $props();
+	let { loading, serverAssociations }: { loading: boolean; serverAssociations: Array<IccpAssociationReport> } = $props();
 </script>
 
 <Table>
 	<TableHead>
+		<TableHeadCell></TableHeadCell>
 		<TableHeadCell>Name</TableHeadCell>
-		<TableHeadCell>Type</TableHeadCell>
+		<TableHeadCell>Version</TableHeadCell>
+		<TableHeadCell>Listener</TableHeadCell>
+		<TableHeadCell>Side</TableHeadCell>
 		<TableHeadCell>Domain</TableHeadCell>
 		<TableHeadCell>Table</TableHeadCell>
-		<TableHeadCell>Host</TableHeadCell>
-		<TableHeadCell>Port</TableHeadCell>
-		<TableHeadCell>Side</TableHeadCell>
 		<TableHeadCell>AP Title</TableHeadCell>
 		<TableHeadCell>AE Qualifier</TableHeadCell>
-		<TableHeadCell>TSAP</TableHeadCell>
-		<TableHeadCell>SSAP</TableHeadCell>
 		<TableHeadCell>PSAP</TableHeadCell>
+		<TableHeadCell>SSAP</TableHeadCell>
+		<TableHeadCell>TSAP</TableHeadCell>
 		<TableHeadCell>Status</TableHeadCell>
-		<TableHeadCell>Controls</TableHeadCell>
 	</TableHead>
 	<TableBody>
 		{#each serverAssociations as associationState}
 			<TableBodyRow>
+				<TableBodyCell class="w-1" rowspan={2}>
+					{#if associationState.status != 'Deleted'}
+						<PenOutline
+							class="inline cursor-pointer pr-0.5"
+							onclick={() => {
+								// editAcseListenerValue = { ...acseListener };
+								// editAcseListener = true;
+							}}
+						/><TrashBinOutline
+							class="inline cursor-pointer pl-0.5"
+							onclick={() => {
+								// editAcseListenerValue = { ...acseListener };
+								// deleteAcseListener = true;
+							}}
+						/>
+					{/if}
+				</TableBodyCell>
 				<TableBodyCell rowspan={2}>{associationState.association.name}</TableBodyCell>
-				<TableBodyCell rowspan={2}>{associationState.association.associationType}</TableBodyCell>
-				<TableBodyCell rowspan={2}>{associationState.association.domain}</TableBodyCell>
-				<TableBodyCell rowspan={2}>{associationState.association.bilateralTable}</TableBodyCell>
-				<TableBodyCell rowspan={2}>{associationState.association.host}</TableBodyCell>
-				<TableBodyCell rowspan={2}>{associationState.association.port}</TableBodyCell>
+				<TableBodyCell rowspan={2}>{associationState.association.version}</TableBodyCell>
+				<TableBodyCell rowspan={2}>{associationState.association.source.called?.listener?.name}</TableBodyCell>
 				<TableBodyCell>Local</TableBodyCell>
+				<TableBodyCell>{associationState.association.localDomain}</TableBodyCell>
+				<TableBodyCell>{associationState.association.localBilateralTable}</TableBodyCell>
 				<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 				<TableBodyCell>{associationState.association.localDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.ssap}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.psap}</TableBodyCell>
+				<TableBodyCell>{associationState.association.localDataCenterParameters.presentationSelector}</TableBodyCell>
+				<TableBodyCell>{associationState.association.localDataCenterParameters.sessionSelector}</TableBodyCell>
+				<TableBodyCell>{associationState.association.localDataCenterParameters.tsapId}</TableBodyCell>
 				<TableBodyCell rowspan={2}>{associationState.status}</TableBodyCell>
-				<TableBodyCell rowspan={2}></TableBodyCell>
 			</TableBodyRow>
 			<TableBodyRow>
 				<TableBodyCell>Remote</TableBodyCell>
+				<TableBodyCell>{associationState.association.remoteDomain}</TableBodyCell>
+				<TableBodyCell>{associationState.association.remoteBilateralTable}</TableBodyCell>
 				<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.apTitle}</TableBodyCell>
 				<TableBodyCell>{associationState.association.remoteDataCenterParameters.aeTitle.aeQualifier}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.tsap}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.ssap}</TableBodyCell>
-				<TableBodyCell>{associationState.association.localDataCenterParameters.psap}</TableBodyCell>
+				<TableBodyCell>{associationState.association.remoteDataCenterParameters.presentationSelector}</TableBodyCell>
+				<TableBodyCell>{associationState.association.remoteDataCenterParameters.sessionSelector}</TableBodyCell>
+				<TableBodyCell>{associationState.association.remoteDataCenterParameters.tsapId}</TableBodyCell>
 			</TableBodyRow>
 		{/each}
 		{#if loading}
